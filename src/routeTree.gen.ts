@@ -9,38 +9,248 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as ProfileSetupRouteImport } from './routes/profile-setup'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardSkillsRouteImport } from './routes/dashboard.skills'
+import { Route as DashboardRoadmapRouteImport } from './routes/dashboard.roadmap'
+import { Route as DashboardQuizRouteImport } from './routes/dashboard.quiz'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
+import { Route as DashboardJobsRouteImport } from './routes/dashboard.jobs'
+import { Route as DashboardInterviewRouteImport } from './routes/dashboard.interview'
+import { Route as DashboardAtsRouteImport } from './routes/dashboard.ats'
+import { Route as DashboardAssistantRouteImport } from './routes/dashboard.assistant'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileSetupRoute = ProfileSetupRouteImport.update({
+  id: '/profile-setup',
+  path: '/profile-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSkillsRoute = DashboardSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRoadmapRoute = DashboardRoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardQuizRoute = DashboardQuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardJobsRoute = DashboardJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardInterviewRoute = DashboardInterviewRouteImport.update({
+  id: '/interview',
+  path: '/interview',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAtsRoute = DashboardAtsRouteImport.update({
+  id: '/ats',
+  path: '/ats',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAssistantRoute = DashboardAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/login': typeof LoginRoute
+  '/profile-setup': typeof ProfileSetupRoute
+  '/progress': typeof ProgressRoute
+  '/signup': typeof SignupRoute
+  '/dashboard/assistant': typeof DashboardAssistantRoute
+  '/dashboard/ats': typeof DashboardAtsRoute
+  '/dashboard/interview': typeof DashboardInterviewRoute
+  '/dashboard/jobs': typeof DashboardJobsRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/quiz': typeof DashboardQuizRoute
+  '/dashboard/roadmap': typeof DashboardRoadmapRoute
+  '/dashboard/skills': typeof DashboardSkillsRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/profile-setup': typeof ProfileSetupRoute
+  '/progress': typeof ProgressRoute
+  '/signup': typeof SignupRoute
+  '/dashboard/assistant': typeof DashboardAssistantRoute
+  '/dashboard/ats': typeof DashboardAtsRoute
+  '/dashboard/interview': typeof DashboardInterviewRoute
+  '/dashboard/jobs': typeof DashboardJobsRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/quiz': typeof DashboardQuizRoute
+  '/dashboard/roadmap': typeof DashboardRoadmapRoute
+  '/dashboard/skills': typeof DashboardSkillsRoute
+  '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/login': typeof LoginRoute
+  '/profile-setup': typeof ProfileSetupRoute
+  '/progress': typeof ProgressRoute
+  '/signup': typeof SignupRoute
+  '/dashboard/assistant': typeof DashboardAssistantRoute
+  '/dashboard/ats': typeof DashboardAtsRoute
+  '/dashboard/interview': typeof DashboardInterviewRoute
+  '/dashboard/jobs': typeof DashboardJobsRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/quiz': typeof DashboardQuizRoute
+  '/dashboard/roadmap': typeof DashboardRoadmapRoute
+  '/dashboard/skills': typeof DashboardSkillsRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/profile-setup'
+    | '/progress'
+    | '/signup'
+    | '/dashboard/assistant'
+    | '/dashboard/ats'
+    | '/dashboard/interview'
+    | '/dashboard/jobs'
+    | '/dashboard/profile'
+    | '/dashboard/quiz'
+    | '/dashboard/roadmap'
+    | '/dashboard/skills'
+    | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/profile-setup'
+    | '/progress'
+    | '/signup'
+    | '/dashboard/assistant'
+    | '/dashboard/ats'
+    | '/dashboard/interview'
+    | '/dashboard/jobs'
+    | '/dashboard/profile'
+    | '/dashboard/quiz'
+    | '/dashboard/roadmap'
+    | '/dashboard/skills'
+    | '/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/profile-setup'
+    | '/progress'
+    | '/signup'
+    | '/dashboard/assistant'
+    | '/dashboard/ats'
+    | '/dashboard/interview'
+    | '/dashboard/jobs'
+    | '/dashboard/profile'
+    | '/dashboard/quiz'
+    | '/dashboard/roadmap'
+    | '/dashboard/skills'
+    | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  ProfileSetupRoute: typeof ProfileSetupRoute
+  ProgressRoute: typeof ProgressRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile-setup': {
+      id: '/profile-setup'
+      path: '/profile-setup'
+      fullPath: '/profile-setup'
+      preLoaderRoute: typeof ProfileSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +258,108 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/skills': {
+      id: '/dashboard/skills'
+      path: '/skills'
+      fullPath: '/dashboard/skills'
+      preLoaderRoute: typeof DashboardSkillsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/roadmap': {
+      id: '/dashboard/roadmap'
+      path: '/roadmap'
+      fullPath: '/dashboard/roadmap'
+      preLoaderRoute: typeof DashboardRoadmapRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/quiz': {
+      id: '/dashboard/quiz'
+      path: '/quiz'
+      fullPath: '/dashboard/quiz'
+      preLoaderRoute: typeof DashboardQuizRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/jobs': {
+      id: '/dashboard/jobs'
+      path: '/jobs'
+      fullPath: '/dashboard/jobs'
+      preLoaderRoute: typeof DashboardJobsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/interview': {
+      id: '/dashboard/interview'
+      path: '/interview'
+      fullPath: '/dashboard/interview'
+      preLoaderRoute: typeof DashboardInterviewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/ats': {
+      id: '/dashboard/ats'
+      path: '/ats'
+      fullPath: '/dashboard/ats'
+      preLoaderRoute: typeof DashboardAtsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/assistant': {
+      id: '/dashboard/assistant'
+      path: '/assistant'
+      fullPath: '/dashboard/assistant'
+      preLoaderRoute: typeof DashboardAssistantRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardAssistantRoute: typeof DashboardAssistantRoute
+  DashboardAtsRoute: typeof DashboardAtsRoute
+  DashboardInterviewRoute: typeof DashboardInterviewRoute
+  DashboardJobsRoute: typeof DashboardJobsRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardQuizRoute: typeof DashboardQuizRoute
+  DashboardRoadmapRoute: typeof DashboardRoadmapRoute
+  DashboardSkillsRoute: typeof DashboardSkillsRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAssistantRoute: DashboardAssistantRoute,
+  DashboardAtsRoute: DashboardAtsRoute,
+  DashboardInterviewRoute: DashboardInterviewRoute,
+  DashboardJobsRoute: DashboardJobsRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
+  DashboardQuizRoute: DashboardQuizRoute,
+  DashboardRoadmapRoute: DashboardRoadmapRoute,
+  DashboardSkillsRoute: DashboardSkillsRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRouteWithChildren,
+  LoginRoute: LoginRoute,
+  ProfileSetupRoute: ProfileSetupRoute,
+  ProgressRoute: ProgressRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
