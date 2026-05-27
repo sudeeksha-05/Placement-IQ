@@ -1,6 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, User } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Sign up — PlacementIQ" }] }),
@@ -8,6 +11,32 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignupPage() {
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) return toast.error("Password must be at least 6 characters");
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+        data: { full_name: name },
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Account created! Welcome to PlacementIQ.");
+    navigate({ to: "/dashboard" });
+  };
+
   return (
     <div className="min-h-screen bg-background bg-hero relative grid place-items-center px-4 py-12">
       <div className="absolute inset-0 grid-bg pointer-events-none" />
@@ -30,18 +59,21 @@ function SignupPage() {
           Start your AI-powered prep in seconds
         </p>
 
-        <form className="mt-8 space-y-4" onSubmit={(e) => e.preventDefault()}>
-          <Field icon={User} type="text" placeholder="Aditi Sharma" label="Full Name" />
-          <Field icon={Mail} type="email" placeholder="you@college.edu" label="Email" />
-          <Field icon={Lock} type="password" placeholder="At least 8 characters" label="Password" />
-          <Field icon={Lock} type="password" placeholder="Re-enter password" label="Confirm Password" />
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+          <Field icon={User} type="text" placeholder="Aditi Sharma" label="Full Name"
+            value={name} onChange={(e: any) => setName(e.target.value)} required />
+          <Field icon={Mail} type="email" placeholder="you@college.edu" label="Email"
+            value={email} onChange={(e: any) => setEmail(e.target.value)} required />
+          <Field icon={Lock} type="password" placeholder="At least 6 characters" label="Password"
+            value={password} onChange={(e: any) => setPassword(e.target.value)} required />
 
-          <Link
-            to="/profile-setup"
-            className="block text-center w-full py-3 rounded-xl bg-gradient-primary text-white font-semibold glow hover:scale-[1.02] transition"
+          <button
+            type="submit"
+            disabled={loading}
+            className="block text-center w-full py-3 rounded-xl bg-gradient-primary text-white font-semibold glow hover:scale-[1.02] transition disabled:opacity-60"
           >
-            Create account
-          </Link>
+            {loading ? <Loader2 className="size-4 animate-spin inline" /> : "Create account"}
+          </button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
