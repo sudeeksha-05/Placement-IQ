@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Bell, Search } from "lucide-react";
+import { useProfile, initialsOf } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 
 export function DashboardShell({
   title,
@@ -11,15 +13,19 @@ export function DashboardShell({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const { profile } = useProfile();
+  const { user } = useAuth();
+  const initials = initialsOf(profile?.full_name, user?.email);
+
   return (
     <div className="min-h-screen flex bg-background">
       <div className="fixed inset-0 grid-bg pointer-events-none -z-10" />
       <Sidebar />
       <main className="flex-1 min-w-0">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/50 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-display font-bold">{title}</h1>
-            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          <div className="min-w-0">
+            <h1 className="text-xl font-display font-bold truncate">{title}</h1>
+            {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 glass rounded-lg px-3 py-1.5 text-sm w-64">
@@ -34,7 +40,7 @@ export function DashboardShell({
               <span className="absolute top-2 right-2 size-2 rounded-full bg-neon animate-pulse" />
             </button>
             <div className="size-9 rounded-lg bg-gradient-primary grid place-items-center text-sm font-semibold glow">
-              AR
+              {initials}
             </div>
           </div>
         </header>
