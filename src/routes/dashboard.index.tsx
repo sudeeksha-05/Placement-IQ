@@ -7,6 +7,7 @@ import {
 import { Flame, FileText, Target, Brain, MessageSquareCode, Award, Zap, Trophy } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { StatCard } from "@/components/ui/StatCard";
+import { useProfile } from "@/hooks/useProfile";
 
 export const Route = createFileRoute("/dashboard/")({
   head: () => ({ meta: [{ title: "Dashboard — PlacementIQ" }] }),
@@ -24,8 +25,11 @@ const ats = [
 const radial = [{ name: "Readiness", value: 78, fill: "oklch(0.7 0.27 300)" }];
 
 function Dashboard() {
+  const { profile } = useProfile();
+  const firstName = (profile?.full_name || "there").split(" ")[0];
   return (
-    <DashboardShell title="Welcome back, Aditi 👋" subtitle="Here's how your placement prep is trending">
+    <DashboardShell title={`Welcome back, ${firstName} 👋`} subtitle="Here's how your placement prep is trending">
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="ATS Score" value="87" delta="+12 this week" icon={FileText} accent="primary" />
         <StatCard label="Skills Detected" value="24/32" delta="+3 new" icon={Target} accent="accent" />
