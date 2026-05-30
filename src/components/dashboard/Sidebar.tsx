@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, FileText, Target, TrendingUp, Brain,
-  MessageSquareCode, Bot, User, LogOut, Sparkles, Briefcase
+  MessageSquareCode, Bot, User, LogOut, Sparkles, Briefcase, Shield,
 } from "lucide-react";
+import { useRole } from "@/hooks/useRole";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
