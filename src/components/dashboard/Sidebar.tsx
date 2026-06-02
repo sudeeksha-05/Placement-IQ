@@ -52,6 +52,18 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {isStaff && (
+          <Link
+            to="/dashboard/admin"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition mt-4 border-t border-border/30 pt-4 ${
+              path.startsWith("/dashboard/admin")
+                ? "bg-gradient-primary text-white glow"
+                : "text-accent hover:text-foreground hover:bg-accent/10"
+            }`}
+          >
+            <Shield className="size-4" /> Admin Panel
+          </Link>
+        )}
       </nav>
 
       <Link
