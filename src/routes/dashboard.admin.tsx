@@ -52,9 +52,7 @@ function AdminGate() {
                 disabled={claiming}
                 onClick={async () => {
                   setClaiming(true);
-                  const { error } = await supabase
-                    .from("user_roles" as any)
-                    .insert({ user_id: user!.id, role: "admin" });
+                  const { error } = await (supabase as any).rpc("claim_admin");
                   if (error) toast.error(error.message);
                   else { toast.success("You're now an admin"); window.location.reload(); }
                   setClaiming(false);
