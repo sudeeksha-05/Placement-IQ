@@ -3,7 +3,6 @@ import {
   LayoutDashboard, FileText, Target, TrendingUp, Brain,
   MessageSquareCode, Bot, User, LogOut, Sparkles, Briefcase, Shield,
 } from "lucide-react";
-import { useRole } from "@/hooks/useRole";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -16,11 +15,11 @@ const items = [
   { to: "/progress", label: "Progress", icon: TrendingUp },
   { to: "/dashboard/assistant", label: "AI Assistant", icon: Bot },
   { to: "/dashboard/profile", label: "Profile", icon: User },
+  { to: "/dashboard/admin", label: "Admin Panel", icon: Shield },
 ];
 
 export function Sidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const { isAdmin } = useRole();
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border/50 bg-sidebar/60 backdrop-blur-xl sticky top-0 h-screen p-4">
@@ -53,13 +52,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      {isAdmin && (
-        <Link to="/dashboard/admin"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm bg-gradient-to-r from-primary/20 to-accent/20 text-foreground hover:from-primary/30 hover:to-accent/30 transition mb-1">
-          <Shield className="size-4" /> Admin Panel
-        </Link>
-      )}
 
       <Link
         to="/login"
