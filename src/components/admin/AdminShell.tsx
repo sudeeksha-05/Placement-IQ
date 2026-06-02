@@ -2,17 +2,18 @@ import { ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, FileEdit, BarChart3, Megaphone,
-  Shield, ArrowLeft, Sparkles,
+  Shield, ArrowLeft, Sparkles, ScrollText,
 } from "lucide-react";
 import { useProfile, initialsOf } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 
 const items = [
   { to: "/dashboard/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/admin/users", label: "Users", icon: Users },
+  { to: "/dashboard/admin/users", label: "Students", icon: Users },
   { to: "/dashboard/admin/content", label: "Content", icon: FileEdit },
   { to: "/dashboard/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/dashboard/admin/notifications", label: "Notifications", icon: Megaphone },
+  { to: "/dashboard/admin/notifications", label: "Announcements", icon: Megaphone },
+  { to: "/dashboard/admin/audit", label: "Audit Logs", icon: ScrollText },
 ];
 
 export function AdminShell({ title, subtitle, children }: {

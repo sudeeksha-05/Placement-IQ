@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as DashboardSkillsRouteImport } from './routes/dashboard.skills'
 import { Route as DashboardRoadmapRouteImport } from './routes/dashboard.roadmap'
 import { Route as DashboardQuizRouteImport } from './routes/dashboard.quiz'
@@ -25,10 +26,14 @@ import { Route as DashboardInterviewRouteImport } from './routes/dashboard.inter
 import { Route as DashboardAtsRouteImport } from './routes/dashboard.ats'
 import { Route as DashboardAssistantRouteImport } from './routes/dashboard.assistant'
 import { Route as DashboardAdminRouteImport } from './routes/dashboard.admin'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminDeniedRouteImport } from './routes/admin.denied'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard.admin.index'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard.admin.users'
 import { Route as DashboardAdminNotificationsRouteImport } from './routes/dashboard.admin.notifications'
 import { Route as DashboardAdminContentRouteImport } from './routes/dashboard.admin.content'
+import { Route as DashboardAdminAuditRouteImport } from './routes/dashboard.admin.audit'
 import { Route as DashboardAdminAnalyticsRouteImport } from './routes/dashboard.admin.analytics'
 import { Route as DashboardAdminUsersUserIdRouteImport } from './routes/dashboard.admin.users.$userId'
 
@@ -66,6 +71,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardSkillsRoute = DashboardSkillsRouteImport.update({
   id: '/skills',
@@ -112,6 +122,21 @@ const DashboardAdminRoute = DashboardAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDeniedRoute = AdminDeniedRouteImport.update({
+  id: '/admin/denied',
+  path: '/admin/denied',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -133,6 +158,11 @@ const DashboardAdminContentRoute = DashboardAdminContentRouteImport.update({
   path: '/content',
   getParentRoute: () => DashboardAdminRoute,
 } as any)
+const DashboardAdminAuditRoute = DashboardAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => DashboardAdminRoute,
+} as any)
 const DashboardAdminAnalyticsRoute = DashboardAdminAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -152,6 +182,9 @@ export interface FileRoutesByFullPath {
   '/profile-setup': typeof ProfileSetupRoute
   '/progress': typeof ProgressRoute
   '/signup': typeof SignupRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/denied': typeof AdminDeniedRoute
+  '/admin/login': typeof AdminLoginRoute
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/assistant': typeof DashboardAssistantRoute
   '/dashboard/ats': typeof DashboardAtsRoute
@@ -161,8 +194,10 @@ export interface FileRoutesByFullPath {
   '/dashboard/quiz': typeof DashboardQuizRoute
   '/dashboard/roadmap': typeof DashboardRoadmapRoute
   '/dashboard/skills': typeof DashboardSkillsRoute
+  '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/analytics': typeof DashboardAdminAnalyticsRoute
+  '/dashboard/admin/audit': typeof DashboardAdminAuditRoute
   '/dashboard/admin/content': typeof DashboardAdminContentRoute
   '/dashboard/admin/notifications': typeof DashboardAdminNotificationsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRouteWithChildren
@@ -175,6 +210,9 @@ export interface FileRoutesByTo {
   '/profile-setup': typeof ProfileSetupRoute
   '/progress': typeof ProgressRoute
   '/signup': typeof SignupRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/denied': typeof AdminDeniedRoute
+  '/admin/login': typeof AdminLoginRoute
   '/dashboard/assistant': typeof DashboardAssistantRoute
   '/dashboard/ats': typeof DashboardAtsRoute
   '/dashboard/interview': typeof DashboardInterviewRoute
@@ -183,8 +221,10 @@ export interface FileRoutesByTo {
   '/dashboard/quiz': typeof DashboardQuizRoute
   '/dashboard/roadmap': typeof DashboardRoadmapRoute
   '/dashboard/skills': typeof DashboardSkillsRoute
+  '/admin': typeof AdminIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/admin/analytics': typeof DashboardAdminAnalyticsRoute
+  '/dashboard/admin/audit': typeof DashboardAdminAuditRoute
   '/dashboard/admin/content': typeof DashboardAdminContentRoute
   '/dashboard/admin/notifications': typeof DashboardAdminNotificationsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRouteWithChildren
@@ -199,6 +239,9 @@ export interface FileRoutesById {
   '/profile-setup': typeof ProfileSetupRoute
   '/progress': typeof ProgressRoute
   '/signup': typeof SignupRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/denied': typeof AdminDeniedRoute
+  '/admin/login': typeof AdminLoginRoute
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/assistant': typeof DashboardAssistantRoute
   '/dashboard/ats': typeof DashboardAtsRoute
@@ -208,8 +251,10 @@ export interface FileRoutesById {
   '/dashboard/quiz': typeof DashboardQuizRoute
   '/dashboard/roadmap': typeof DashboardRoadmapRoute
   '/dashboard/skills': typeof DashboardSkillsRoute
+  '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/analytics': typeof DashboardAdminAnalyticsRoute
+  '/dashboard/admin/audit': typeof DashboardAdminAuditRoute
   '/dashboard/admin/content': typeof DashboardAdminContentRoute
   '/dashboard/admin/notifications': typeof DashboardAdminNotificationsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRouteWithChildren
@@ -225,6 +270,9 @@ export interface FileRouteTypes {
     | '/profile-setup'
     | '/progress'
     | '/signup'
+    | '/admin/dashboard'
+    | '/admin/denied'
+    | '/admin/login'
     | '/dashboard/admin'
     | '/dashboard/assistant'
     | '/dashboard/ats'
@@ -234,8 +282,10 @@ export interface FileRouteTypes {
     | '/dashboard/quiz'
     | '/dashboard/roadmap'
     | '/dashboard/skills'
+    | '/admin/'
     | '/dashboard/'
     | '/dashboard/admin/analytics'
+    | '/dashboard/admin/audit'
     | '/dashboard/admin/content'
     | '/dashboard/admin/notifications'
     | '/dashboard/admin/users'
@@ -248,6 +298,9 @@ export interface FileRouteTypes {
     | '/profile-setup'
     | '/progress'
     | '/signup'
+    | '/admin/dashboard'
+    | '/admin/denied'
+    | '/admin/login'
     | '/dashboard/assistant'
     | '/dashboard/ats'
     | '/dashboard/interview'
@@ -256,8 +309,10 @@ export interface FileRouteTypes {
     | '/dashboard/quiz'
     | '/dashboard/roadmap'
     | '/dashboard/skills'
+    | '/admin'
     | '/dashboard'
     | '/dashboard/admin/analytics'
+    | '/dashboard/admin/audit'
     | '/dashboard/admin/content'
     | '/dashboard/admin/notifications'
     | '/dashboard/admin/users'
@@ -271,6 +326,9 @@ export interface FileRouteTypes {
     | '/profile-setup'
     | '/progress'
     | '/signup'
+    | '/admin/dashboard'
+    | '/admin/denied'
+    | '/admin/login'
     | '/dashboard/admin'
     | '/dashboard/assistant'
     | '/dashboard/ats'
@@ -280,8 +338,10 @@ export interface FileRouteTypes {
     | '/dashboard/quiz'
     | '/dashboard/roadmap'
     | '/dashboard/skills'
+    | '/admin/'
     | '/dashboard/'
     | '/dashboard/admin/analytics'
+    | '/dashboard/admin/audit'
     | '/dashboard/admin/content'
     | '/dashboard/admin/notifications'
     | '/dashboard/admin/users'
@@ -296,6 +356,10 @@ export interface RootRouteChildren {
   ProfileSetupRoute: typeof ProfileSetupRoute
   ProgressRoute: typeof ProgressRoute
   SignupRoute: typeof SignupRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDeniedRoute: typeof AdminDeniedRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -348,6 +412,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard/skills': {
       id: '/dashboard/skills'
@@ -412,6 +483,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/denied': {
+      id: '/admin/denied'
+      path: '/admin/denied'
+      fullPath: '/admin/denied'
+      preLoaderRoute: typeof AdminDeniedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/admin/': {
       id: '/dashboard/admin/'
       path: '/'
@@ -438,6 +530,13 @@ declare module '@tanstack/react-router' {
       path: '/content'
       fullPath: '/dashboard/admin/content'
       preLoaderRoute: typeof DashboardAdminContentRouteImport
+      parentRoute: typeof DashboardAdminRoute
+    }
+    '/dashboard/admin/audit': {
+      id: '/dashboard/admin/audit'
+      path: '/audit'
+      fullPath: '/dashboard/admin/audit'
+      preLoaderRoute: typeof DashboardAdminAuditRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
     '/dashboard/admin/analytics': {
@@ -470,6 +569,7 @@ const DashboardAdminUsersRouteWithChildren =
 
 interface DashboardAdminRouteChildren {
   DashboardAdminAnalyticsRoute: typeof DashboardAdminAnalyticsRoute
+  DashboardAdminAuditRoute: typeof DashboardAdminAuditRoute
   DashboardAdminContentRoute: typeof DashboardAdminContentRoute
   DashboardAdminNotificationsRoute: typeof DashboardAdminNotificationsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRouteWithChildren
@@ -478,6 +578,7 @@ interface DashboardAdminRouteChildren {
 
 const DashboardAdminRouteChildren: DashboardAdminRouteChildren = {
   DashboardAdminAnalyticsRoute: DashboardAdminAnalyticsRoute,
+  DashboardAdminAuditRoute: DashboardAdminAuditRoute,
   DashboardAdminContentRoute: DashboardAdminContentRoute,
   DashboardAdminNotificationsRoute: DashboardAdminNotificationsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRouteWithChildren,
@@ -525,6 +626,10 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileSetupRoute: ProfileSetupRoute,
   ProgressRoute: ProgressRoute,
   SignupRoute: SignupRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminDeniedRoute: AdminDeniedRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
