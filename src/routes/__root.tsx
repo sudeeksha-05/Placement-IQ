@@ -78,6 +78,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "AI-powered placement preparation platform for students." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:title", content: "PlacementIQ — AI Placement Readiness" },
+      { name: "twitter:title", content: "PlacementIQ — AI Placement Readiness" },
+      { property: "og:description", content: "AI-powered placement preparation platform for students." },
+      { name: "twitter:description", content: "AI-powered placement preparation platform for students." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2716dfe6-ee83-49fc-aef0-fd93fd16980c/id-preview-fc2f1b71--0528ed07-e36e-4c43-9875-90a7bd8efed5.lovable.app-1780406863199.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2716dfe6-ee83-49fc-aef0-fd93fd16980c/id-preview-fc2f1b71--0528ed07-e36e-4c43-9875-90a7bd8efed5.lovable.app-1780406863199.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
