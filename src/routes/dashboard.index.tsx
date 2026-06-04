@@ -28,7 +28,14 @@ function Dashboard() {
   const { profile } = useProfile();
   const firstName = (profile?.full_name || "there").split(" ")[0];
   return (
-    <DashboardShell title={`Welcome back, ${firstName} 👋`} subtitle="Here's how your placement prep is trending">
+    <DashboardShell
+      title={
+        <span className="text-2xl md:text-3xl font-display font-bold bg-gradient-to-r from-white via-[oklch(0.85_0.18_300)] to-[oklch(0.78_0.18_220)] bg-clip-text text-transparent drop-shadow-sm">
+          Welcome back, {firstName} 👋
+        </span>
+      }
+      subtitle="Here's how your placement prep is trending"
+    >
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="ATS Score" value="87" delta="+12 this week" icon={FileText} accent="primary" />
