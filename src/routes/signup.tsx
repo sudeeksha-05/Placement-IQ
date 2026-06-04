@@ -96,6 +96,31 @@ function SignupPage() {
           >
             {loading ? <Loader2 className="size-4 animate-spin inline" /> : "Create account"}
           </button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/50" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-[oklch(0.18_0.04_280)] text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={signInWithGoogle}
+            disabled={googleLoading}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl glass font-semibold hover:bg-white/10 transition disabled:opacity-60"
+          >
+            {googleLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <GoogleIcon className="size-4" />
+                Sign in with Google
+              </>
+            )}
+          </button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
