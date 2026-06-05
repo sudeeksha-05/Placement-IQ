@@ -88,12 +88,15 @@ function Jobs() {
     });
   };
 
-  const apply = (id: string, co: string) => {
-    if (applied.includes(id)) return;
-    const next = [...applied, id];
-    setApplied(next);
-    persist("piq_applied_jobs", next);
-    toast.success(`Application sent to ${co}`);
+  const apply = (job: Job) => {
+    // Open the real listing (LinkedIn / Indeed / Naukri / company careers) in a new tab.
+    window.open(job.applyUrl, "_blank", "noopener,noreferrer");
+    if (!applied.includes(job.id)) {
+      const next = [...applied, job.id];
+      setApplied(next);
+      persist("piq_applied_jobs", next);
+    }
+    toast.success(`Opening ${job.co} application on ${job.source}…`);
   };
 
   const jobs = useMemo(() => {
