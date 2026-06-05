@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Mail, Lock, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -30,12 +31,16 @@ function LoginPage() {
 
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}/dashboard`,
     });
-    setGoogleLoading(false);
-    if (error) toast.error(error.message);
+    if (result.error) {
+      setGoogleLoading(false);
+      toast.error(result.error.message || "Failed to sign in with Google");
+      return;
+    }
+    if (result.redirected) return;
+    navigate({ to: "/dashboard" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
