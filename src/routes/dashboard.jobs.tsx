@@ -291,11 +291,11 @@ function Jobs() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { apply(selected.id, selected.co); setSelected(null); }}
-                  disabled={applied.includes(selected.id)}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-primary text-white text-sm font-medium glow flex items-center justify-center gap-2 disabled:opacity-60"
+                  onClick={() => { apply(selected); setSelected(null); }}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-primary text-white text-sm font-medium glow flex items-center justify-center gap-2"
                 >
-                  {applied.includes(selected.id) ? <>Already Applied</> : <><Sparkles className="size-4" /> Apply now</>}
+                  <Sparkles className="size-4" /> Apply on {selected.source}
+                  <ExternalLink className="size-3.5" />
                 </button>
                 <button
                   onClick={() => toggleSave(selected.id)}
