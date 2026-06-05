@@ -243,13 +243,12 @@ function Jobs() {
                   {isSaved ? <BookmarkCheck className="size-4 text-neon-2" /> : <Bookmark className="size-4" />}
                 </button>
                 <button
-                  onClick={() => apply(j.id, j.co)}
-                  disabled={isApplied}
-                  className={`px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-1.5 ${
-                    isApplied ? "bg-neon-2/40 cursor-not-allowed" : "bg-gradient-primary glow"
-                  }`}
+                  onClick={() => apply(j)}
+                  className="px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-1.5 bg-gradient-primary glow"
+                  title={`Apply on ${j.source}`}
                 >
-                  {isApplied ? (<><CheckCircle2 className="size-3.5" /> Applied</>) : (<><Sparkles className="size-3.5" /> Apply</>)}
+                  {isApplied ? (<><CheckCircle2 className="size-3.5" /> Apply again</>) : (<><Sparkles className="size-3.5" /> Apply on {j.source}</>)}
+                  <ExternalLink className="size-3" />
                 </button>
               </div>
             </motion.div>
