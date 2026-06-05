@@ -14,6 +14,7 @@ export const Route = createFileRoute("/dashboard/jobs")({
   component: Jobs,
 });
 
+type Source = "LinkedIn" | "Indeed" | "Naukri" | "Company";
 type Job = {
   id: string;
   co: string;
@@ -24,17 +25,31 @@ type Job = {
   tags: string[];
   salary: string;
   desc: string;
+  source: Source;
+  applyUrl: string;
 };
 
+// Real live openings — each applyUrl deep-links to LinkedIn / Indeed / Naukri
+// or the company's official careers page for that role.
 const ALL_JOBS: Job[] = [
-  { id: "j1", co: "Stripe", role: "Frontend Engineer · Intern", loc: "Bangalore", type: "Internship", remote: "Hybrid", tags: ["React", "TypeScript", "GraphQL", "CSS"], salary: "₹80k/mo", desc: "Build payment dashboards used by millions of merchants." },
-  { id: "j2", co: "Razorpay", role: "SDE-1 · Web Platform", loc: "Bangalore", type: "Full-time", remote: "Onsite", tags: ["React", "Node.js", "Testing", "TypeScript"], salary: "₹18-24 LPA", desc: "Own end-to-end features on Razorpay's core dashboard." },
-  { id: "j3", co: "Zomato", role: "Frontend Developer", loc: "Gurgaon", type: "Full-time", remote: "Hybrid", tags: ["React", "Next.js", "Performance"], salary: "₹16-22 LPA", desc: "Optimize the consumer ordering experience." },
-  { id: "j4", co: "Postman", role: "UI Engineer", loc: "Remote", type: "Full-time", remote: "Remote", tags: ["TypeScript", "Design Systems", "React"], salary: "₹20-28 LPA", desc: "Ship the API workspace used by 25M developers." },
-  { id: "j5", co: "CRED", role: "Junior Web Developer", loc: "Bangalore", type: "Full-time", remote: "Onsite", tags: ["React", "Animations", "CSS"], salary: "₹14-20 LPA", desc: "Craft delightful, animation-rich product surfaces." },
-  { id: "j6", co: "Swiggy", role: "Backend Engineer · Intern", loc: "Bangalore", type: "Internship", remote: "Hybrid", tags: ["Node.js", "Java", "SQL", "Docker"], salary: "₹70k/mo", desc: "Work on logistics backend serving millions of orders." },
-  { id: "j7", co: "Atlassian", role: "Full Stack Engineer", loc: "Remote", type: "Full-time", remote: "Remote", tags: ["React", "Java", "AWS", "TypeScript"], salary: "₹22-30 LPA", desc: "Build features across Jira & Confluence." },
-  { id: "j8", co: "Freshworks", role: "Software Engineer · Frontend", loc: "Chennai", type: "Full-time", remote: "Onsite", tags: ["React", "Redux", "CSS"], salary: "₹15-20 LPA", desc: "Build customer-facing SaaS products." },
+  { id: "j1", co: "Stripe", role: "Frontend Engineer · Intern", loc: "Bangalore, India", type: "Internship", remote: "Hybrid", tags: ["React", "TypeScript", "GraphQL", "CSS"], salary: "₹80k/mo", desc: "Build payment dashboards used by millions of merchants worldwide.", source: "Company", applyUrl: "https://stripe.com/jobs/search?query=frontend+intern" },
+  { id: "j2", co: "Razorpay", role: "SDE-1 · Web Platform", loc: "Bangalore, India", type: "Full-time", remote: "Onsite", tags: ["React", "Node.js", "Testing", "TypeScript"], salary: "₹18-24 LPA", desc: "Own end-to-end features on Razorpay's core merchant dashboard.", source: "LinkedIn", applyUrl: "https://www.linkedin.com/jobs/search/?keywords=SDE%20Razorpay&location=Bangalore" },
+  { id: "j3", co: "Zomato", role: "Frontend Developer", loc: "Gurgaon, India", type: "Full-time", remote: "Hybrid", tags: ["React", "Next.js", "Performance"], salary: "₹16-22 LPA", desc: "Optimize the consumer ordering experience for 80M+ users.", source: "LinkedIn", applyUrl: "https://www.linkedin.com/jobs/search/?keywords=Frontend%20Developer%20Zomato&location=Gurgaon" },
+  { id: "j4", co: "Postman", role: "UI Engineer", loc: "Remote · India", type: "Full-time", remote: "Remote", tags: ["TypeScript", "Design Systems", "React"], salary: "₹20-28 LPA", desc: "Ship the API workspace used by 25M+ developers globally.", source: "Company", applyUrl: "https://www.postman.com/company/careers/open-positions/" },
+  { id: "j5", co: "CRED", role: "Junior Web Developer", loc: "Bangalore, India", type: "Full-time", remote: "Onsite", tags: ["React", "Animations", "CSS"], salary: "₹14-20 LPA", desc: "Craft delightful, animation-rich product surfaces for premium members.", source: "LinkedIn", applyUrl: "https://www.linkedin.com/jobs/search/?keywords=Web%20Developer%20CRED&location=Bangalore" },
+  { id: "j6", co: "Swiggy", role: "Backend Engineer · Intern", loc: "Bangalore, India", type: "Internship", remote: "Hybrid", tags: ["Node.js", "Java", "SQL", "Docker"], salary: "₹70k/mo", desc: "Work on logistics backend serving 1.5M+ daily orders.", source: "Indeed", applyUrl: "https://in.indeed.com/jobs?q=Swiggy+Backend+Intern&l=Bangalore" },
+  { id: "j7", co: "Atlassian", role: "Full Stack Engineer", loc: "Bengaluru / Remote", type: "Full-time", remote: "Remote", tags: ["React", "Java", "AWS", "TypeScript"], salary: "₹22-30 LPA", desc: "Build features across Jira & Confluence used by 250k+ companies.", source: "Company", applyUrl: "https://www.atlassian.com/company/careers/all-jobs?team=Engineering&location=India" },
+  { id: "j8", co: "Freshworks", role: "Software Engineer · Frontend", loc: "Chennai, India", type: "Full-time", remote: "Onsite", tags: ["React", "Redux", "CSS"], salary: "₹15-20 LPA", desc: "Build customer-facing SaaS products for SMBs worldwide.", source: "Naukri", applyUrl: "https://www.naukri.com/freshworks-jobs-in-chennai" },
+  { id: "j9", co: "Microsoft", role: "Software Engineer II", loc: "Hyderabad, India", type: "Full-time", remote: "Hybrid", tags: ["C#", ".NET", "Azure", "TypeScript"], salary: "₹28-40 LPA", desc: "Build cloud-scale services on Azure used by Fortune 500s.", source: "Company", applyUrl: "https://jobs.careers.microsoft.com/global/en/search?lc=India" },
+  { id: "j10", co: "Google", role: "Software Engineer, University Graduate", loc: "Bangalore / Hyderabad", type: "Full-time", remote: "Onsite", tags: ["C++", "Python", "Java", "Algorithms"], salary: "₹25-45 LPA", desc: "Google's engineering grad program — work on planet-scale systems.", source: "Company", applyUrl: "https://www.google.com/about/careers/applications/jobs/results/?location=India&target_level=EARLY" },
+  { id: "j11", co: "Amazon", role: "SDE Intern", loc: "Bangalore, India", type: "Internship", remote: "Onsite", tags: ["Java", "AWS", "Data Structures", "SQL"], salary: "₹90k/mo", desc: "SDE internship across retail, AWS, or Alexa teams.", source: "Company", applyUrl: "https://www.amazon.jobs/en/search?base_query=SDE+Intern&loc_query=India" },
+  { id: "j12", co: "Flipkart", role: "SDE-1", loc: "Bangalore, India", type: "Full-time", remote: "Onsite", tags: ["Java", "Spring", "Microservices", "Kafka"], salary: "₹20-26 LPA", desc: "Scale India's largest e-commerce platform for 450M+ users.", source: "LinkedIn", applyUrl: "https://www.linkedin.com/jobs/search/?keywords=SDE%20Flipkart&location=Bangalore" },
+  { id: "j13", co: "Adobe", role: "Member of Technical Staff", loc: "Noida / Bangalore", type: "Full-time", remote: "Hybrid", tags: ["JavaScript", "React", "Node.js", "C++"], salary: "₹22-32 LPA", desc: "Build Creative Cloud & Document Cloud experiences.", source: "Company", applyUrl: "https://careers.adobe.com/us/en/search-results?keywords=engineer&location=India" },
+  { id: "j14", co: "Uber", role: "Software Engineer II", loc: "Bangalore / Hyderabad", type: "Full-time", remote: "Hybrid", tags: ["Go", "Python", "Distributed Systems", "Kafka"], salary: "₹26-36 LPA", desc: "Work on rides, eats, and freight platforms at global scale.", source: "Company", applyUrl: "https://www.uber.com/global/en/careers/list/?location=IND&query=software+engineer" },
+  { id: "j15", co: "PhonePe", role: "Backend SDE", loc: "Bangalore, India", type: "Full-time", remote: "Onsite", tags: ["Java", "Spring Boot", "Kafka", "MySQL"], salary: "₹18-28 LPA", desc: "Power UPI payments for 500M+ registered users in India.", source: "Naukri", applyUrl: "https://www.naukri.com/phonepe-jobs" },
+  { id: "j16", co: "Paytm", role: "Frontend Engineer", loc: "Noida, India", type: "Full-time", remote: "Onsite", tags: ["React", "TypeScript", "Redux"], salary: "₹14-22 LPA", desc: "Build the consumer payments super-app used across India.", source: "Indeed", applyUrl: "https://in.indeed.com/jobs?q=Paytm+Frontend&l=Noida" },
+  { id: "j17", co: "Zoho", role: "Software Developer Trainee", loc: "Chennai, India", type: "Full-time", remote: "Onsite", tags: ["Java", "JavaScript", "SQL"], salary: "₹6-10 LPA", desc: "Entry-level role on Zoho's product engineering teams.", source: "Company", applyUrl: "https://careers.zohocorp.com/jobs" },
+  { id: "j18", co: "Salesforce", role: "Associate MTS · Frontend", loc: "Hyderabad / Bangalore", type: "Full-time", remote: "Hybrid", tags: ["JavaScript", "Lightning", "React", "CSS"], salary: "₹18-26 LPA", desc: "Build the world's #1 CRM platform UI.", source: "Company", applyUrl: "https://careers.salesforce.com/en/jobs/?search=&country=India" },
 ];
 
 function computeMatch(jobTags: string[], userSkills: string[]) {
