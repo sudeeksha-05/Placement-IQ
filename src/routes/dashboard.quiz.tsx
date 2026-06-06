@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Timer, Trophy, Brain, ChevronRight, Loader2, Check, X, RotateCcw } from "lucide-react";
+import { Trophy, Brain, ChevronRight, Loader2, Check, X, RotateCcw, Sparkles, TrendingUp, TrendingDown, Lightbulb } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { generateQuiz } from "@/lib/ai.functions";
+import { generateQuiz, saveQuizAttempt } from "@/lib/ai.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/quiz")({
   head: () => ({ meta: [{ title: "Quizzes — PlacementIQ" }] }),
   component: Quiz,
 });
+
 
 const categories = [
   { name: "Java", diff: "Intermediate", color: "from-orange-500/40 to-red-500/20" },
@@ -23,26 +24,41 @@ const categories = [
   { name: "System Design", diff: "Hard", color: "from-indigo-500/40 to-purple-500/20" },
 ] as const;
 
-type Question = { q: string; options: string[]; answer: number; explanation: string };
+type Question = { q: string; type?: string; subtopic: string; options: string[]; answer: number; explanation: string };
+type Analysis = {
+  percentage: number;
+  weak_areas: string[];
+  strong_areas: string[];
+  recommendations: { summary: string; projects: string[]; roadmap: string[]; next_topics: string[] };
+} | null;
 
 function Quiz() {
   const [topic, setTopic] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<"Easy" | "Intermediate" | "Hard">("Intermediate");
+  const [adaptiveDifficulty, setAdaptiveDifficulty] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
+  const [details, setDetails] = useState<{ subtopic: string; correct: boolean }[]>([]);
   const [done, setDone] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<Analysis>(null);
   const gen = useServerFn(generateQuiz);
+  const save = useServerFn(saveQuizAttempt);
 
   const start = async (t: string, d: "Easy" | "Intermediate" | "Hard") => {
     setTopic(t); setDifficulty(d); setLoading(true);
-    setQuestions([]); setIdx(0); setSelected(null); setScore(0); setDone(false);
+    setQuestions([]); setIdx(0); setSelected(null); setScore(0); setDetails([]); setDone(false); setAnalysis(null);
     try {
-      const { questions } = await gen({ data: { topic: t, difficulty: d, count: 5 } });
-      if (!questions.length) throw new Error("Could not generate questions");
-      setQuestions(questions);
+      const res = await gen({ data: { topic: t, difficulty: d, count: 5 } });
+      if (!res.questions.length) throw new Error("Could not generate questions");
+      setQuestions(res.questions);
+      setAdaptiveDifficulty(res.adaptive_difficulty ?? d);
+      if (res.adaptive_difficulty && res.adaptive_difficulty !== d) {
+        toast.success(`Adapted to ${res.adaptive_difficulty} based on your history`);
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate quiz");
       setTopic(null);
@@ -52,41 +68,124 @@ function Quiz() {
   const choose = (i: number) => {
     if (selected !== null) return;
     setSelected(i);
-    if (i === questions[idx].answer) setScore(s => s + 1);
+    const q = questions[idx];
+    const correct = i === q.answer;
+    if (correct) setScore(s => s + 1);
+    setDetails(d => [...d, { subtopic: q.subtopic, correct }]);
   };
 
-  const next = () => {
-    if (idx + 1 >= questions.length) { setDone(true); return; }
+  const next = async () => {
+    if (idx + 1 >= questions.length) {
+      setDone(true);
+      setAnalyzing(true);
+      try {
+        const res = await save({ data: {
+          topic: topic!,
+          difficulty: adaptiveDifficulty || difficulty,
+          score, total: questions.length,
+          questionDetails: details,
+        }});
+        setAnalysis(res as Analysis);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Could not save attempt");
+      } finally { setAnalyzing(false); }
+      return;
+    }
     setIdx(idx + 1); setSelected(null);
   };
 
-  const reset = () => { setTopic(null); setQuestions([]); setDone(false); };
+  const reset = () => { setTopic(null); setQuestions([]); setDone(false); setAnalysis(null); };
 
   if (topic && (loading || questions.length > 0)) {
     return (
-      <DashboardShell title={`${topic} · ${difficulty}`} subtitle="AI-generated quiz · live scoring">
+      <DashboardShell title={`${topic} · ${adaptiveDifficulty || difficulty}`} subtitle="AI-personalized quiz · adaptive difficulty">
         <div className="max-w-3xl mx-auto">
           {loading && (
             <div className="glass-strong neon-border rounded-2xl p-12 text-center">
               <Loader2 className="size-8 animate-spin text-neon mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Generating fresh questions with AI…</p>
+              <p className="text-sm text-muted-foreground">Personalizing questions from your profile, ATS report & history…</p>
             </div>
           )}
 
           {!loading && done && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="glass-strong neon-border rounded-2xl p-10 text-center">
-              <Trophy className="size-12 text-neon mx-auto mb-3" />
-              <p className="text-xs uppercase tracking-widest text-neon-2">Quiz Complete</p>
-              <p className="text-6xl font-display font-bold text-gradient mt-3">{score}/{questions.length}</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                {score === questions.length ? "Perfect! 🚀" : score >= questions.length / 2 ? "Solid effort — keep going." : "Time to revise — you got this."}
-              </p>
-              <div className="flex gap-3 justify-center mt-6">
+              className="glass-strong neon-border rounded-2xl p-8 space-y-6">
+              <div className="text-center">
+                <Trophy className="size-12 text-neon mx-auto mb-3" />
+                <p className="text-xs uppercase tracking-widest text-neon-2">Quiz Complete</p>
+                <p className="text-6xl font-display font-bold text-gradient mt-3">{score}/{questions.length}</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {score === questions.length ? "Perfect! 🚀" : score >= questions.length / 2 ? "Solid effort — keep going." : "Time to revise — you got this."}
+                </p>
+              </div>
+
+              {analyzing && (
+                <div className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <Loader2 className="size-4 animate-spin" /> Analyzing your performance with AI…
+                </div>
+              )}
+
+              {analysis && (
+                <div className="grid md:grid-cols-2 gap-4 text-left">
+                  <div className="glass rounded-xl p-4">
+                    <p className="text-xs uppercase tracking-widest text-emerald-400 flex items-center gap-1.5 mb-2"><TrendingUp className="size-3" /> Strong Areas</p>
+                    {analysis.strong_areas.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {analysis.strong_areas.map(s => <span key={s} className="text-xs glass rounded-full px-2.5 py-1 border border-emerald-500/30">{s}</span>)}
+                      </div>
+                    ) : <p className="text-xs text-muted-foreground">Keep practicing to identify strengths.</p>}
+                  </div>
+                  <div className="glass rounded-xl p-4">
+                    <p className="text-xs uppercase tracking-widest text-red-400 flex items-center gap-1.5 mb-2"><TrendingDown className="size-3" /> Weak Areas</p>
+                    {analysis.weak_areas.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {analysis.weak_areas.map(s => <span key={s} className="text-xs glass rounded-full px-2.5 py-1 border border-red-500/30">{s}</span>)}
+                      </div>
+                    ) : <p className="text-xs text-muted-foreground">No major gaps detected.</p>}
+                  </div>
+
+                  {analysis.recommendations?.summary && (
+                    <div className="glass rounded-xl p-4 md:col-span-2">
+                      <p className="text-xs uppercase tracking-widest text-neon-2 flex items-center gap-1.5 mb-2"><Sparkles className="size-3" /> AI Verdict</p>
+                      <p className="text-sm">{analysis.recommendations.summary}</p>
+                    </div>
+                  )}
+
+                  {analysis.recommendations?.next_topics?.length > 0 && (
+                    <div className="glass rounded-xl p-4">
+                      <p className="text-xs uppercase tracking-widest text-neon-2 mb-2">Recommended Topics</p>
+                      <ul className="text-sm space-y-1">
+                        {analysis.recommendations.next_topics.map(t => <li key={t} className="flex gap-2"><ChevronRight className="size-3.5 mt-0.5 text-neon" />{t}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.recommendations?.projects?.length > 0 && (
+                    <div className="glass rounded-xl p-4">
+                      <p className="text-xs uppercase tracking-widest text-neon-2 mb-2 flex items-center gap-1.5"><Lightbulb className="size-3" /> Project Ideas</p>
+                      <ul className="text-sm space-y-1">
+                        {analysis.recommendations.projects.map(p => <li key={p} className="flex gap-2"><ChevronRight className="size-3.5 mt-0.5 text-neon" />{p}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.recommendations?.roadmap?.length > 0 && (
+                    <div className="glass rounded-xl p-4 md:col-span-2">
+                      <p className="text-xs uppercase tracking-widest text-neon-2 mb-2">Suggested Roadmap</p>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        {analysis.recommendations.roadmap.map((r, i) => <li key={i}>{r}</li>)}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-center pt-2">
                 <button onClick={() => start(topic, difficulty)} className="px-5 py-2.5 rounded-xl bg-gradient-primary text-white glow font-semibold flex items-center gap-2">
-                  <RotateCcw className="size-4" /> Retry
+                  <RotateCcw className="size-4" /> New personalized quiz
                 </button>
                 <button onClick={reset} className="px-5 py-2.5 rounded-xl glass hover:bg-white/10">Pick another</button>
+
               </div>
             </motion.div>
           )}
@@ -96,12 +195,16 @@ function Quiz() {
               className="glass-strong neon-border rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4 text-xs">
                 <span className="glass rounded-full px-3 py-1">Question {idx + 1} / {questions.length}</span>
-                <span className="glass rounded-full px-3 py-1 flex items-center gap-1.5"><Trophy className="size-3" /> {score}</span>
+                <div className="flex items-center gap-2">
+                  {questions[idx].subtopic && <span className="glass rounded-full px-3 py-1 text-neon-2">{questions[idx].subtopic}</span>}
+                  <span className="glass rounded-full px-3 py-1 flex items-center gap-1.5"><Trophy className="size-3" /> {score}</span>
+                </div>
               </div>
               <div className="h-1 rounded-full bg-muted overflow-hidden mb-6">
                 <div className="h-full bg-gradient-primary transition-all" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
               </div>
               <h3 className="text-lg font-display font-semibold mb-5 leading-snug">{questions[idx].q}</h3>
+
               <div className="space-y-2">
                 {questions[idx].options.map((opt, i) => {
                   const correct = i === questions[idx].answer;
