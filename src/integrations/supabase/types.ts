@@ -260,6 +260,57 @@ export type Database = {
         }
         Relationships: []
       }
+      quiz_attempts: {
+        Row: {
+          created_at: string
+          difficulty: string
+          id: string
+          percentage: number
+          question_details: Json
+          recommendations: Json
+          recommended_topics: Json
+          score: number
+          strong_areas: Json
+          target_role: string | null
+          topic: string
+          total: number
+          user_id: string
+          weak_areas: Json
+        }
+        Insert: {
+          created_at?: string
+          difficulty: string
+          id?: string
+          percentage?: number
+          question_details?: Json
+          recommendations?: Json
+          recommended_topics?: Json
+          score?: number
+          strong_areas?: Json
+          target_role?: string | null
+          topic: string
+          total?: number
+          user_id: string
+          weak_areas?: Json
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          percentage?: number
+          question_details?: Json
+          recommendations?: Json
+          recommended_topics?: Json
+          score?: number
+          strong_areas?: Json
+          target_role?: string | null
+          topic?: string
+          total?: number
+          user_id?: string
+          weak_areas?: Json
+        }
+        Relationships: []
+      }
       resumes: {
         Row: {
           ats_score: number | null
