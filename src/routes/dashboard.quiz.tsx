@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Timer, Trophy, Brain, ChevronRight, Loader2, Check, X, RotateCcw } from "lucide-react";
+import { Trophy, Brain, ChevronRight, Loader2, Check, X, RotateCcw, Sparkles, TrendingUp, TrendingDown, Lightbulb } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { generateQuiz } from "@/lib/ai.functions";
+import { generateQuiz, saveQuizAttempt } from "@/lib/ai.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/quiz")({
   head: () => ({ meta: [{ title: "Quizzes — PlacementIQ" }] }),
   component: Quiz,
 });
+
 
 const categories = [
   { name: "Java", diff: "Intermediate", color: "from-orange-500/40 to-red-500/20" },
