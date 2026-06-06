@@ -195,12 +195,16 @@ function Quiz() {
               className="glass-strong neon-border rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4 text-xs">
                 <span className="glass rounded-full px-3 py-1">Question {idx + 1} / {questions.length}</span>
-                <span className="glass rounded-full px-3 py-1 flex items-center gap-1.5"><Trophy className="size-3" /> {score}</span>
+                <div className="flex items-center gap-2">
+                  {questions[idx].subtopic && <span className="glass rounded-full px-3 py-1 text-neon-2">{questions[idx].subtopic}</span>}
+                  <span className="glass rounded-full px-3 py-1 flex items-center gap-1.5"><Trophy className="size-3" /> {score}</span>
+                </div>
               </div>
               <div className="h-1 rounded-full bg-muted overflow-hidden mb-6">
                 <div className="h-full bg-gradient-primary transition-all" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
               </div>
               <h3 className="text-lg font-display font-semibold mb-5 leading-snug">{questions[idx].q}</h3>
+
               <div className="space-y-2">
                 {questions[idx].options.map((opt, i) => {
                   const correct = i === questions[idx].answer;
