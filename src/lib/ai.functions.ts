@@ -290,3 +290,181 @@ Return ONLY valid JSON: { "question": "<next question>", "feedback": { "score": 
       feedback: parsed.feedback ?? null,
     };
   });
+
+/* ---------------- PERSONALIZED AI CAREER ROADMAP ---------------- */
+export const generateRoadmap = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({
+    weeks: z.number().int().min(4).max(12).optional(),
+  }).optional())
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const weeks = data?.weeks ?? 6;
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name,target_role,skills,branch,graduation_year,experience_level,college")
+      .eq("id", userId).maybeSingle();
+
+    const { data: resume } = await supabaseAdmin
+      .from("resumes")
+      .select("target_role,ats_score,detected_skills,missing_skills,summary")
+      .eq("user_id", userId).eq("status", "complete")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+    const { data: attempts } = await supabaseAdmin
+      .from("quiz_attempts")
+      .select("topic,difficulty,percentage,weak_areas,strong_areas,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }).limit(15);
+
+    const role = (profile?.target_role || resume?.target_role || "Software Engineer").trim();
+    const skills: string[] = (profile?.skills as string[] | null) ?? [];
+    const detected: string[] = (resume?.detected_skills as string[] | null) ?? [];
+    const missing: string[] = (resume?.missing_skills as string[] | null) ?? [];
+    const atsScore = resume?.ats_score ?? null;
+
+    const quizAvg = (attempts ?? []).length
+      ? Math.round((attempts ?? []).reduce((s, a) => s + (a.percentage ?? 0), 0) / (attempts ?? []).length)
+      : null;
+    const weakTopics = Array.from(new Set(
+      (attempts ?? []).flatMap(a => (Array.isArray(a.weak_areas) ? (a.weak_areas as string[]) : []))
+    )).slice(0, 10);
+    const strongTopics = Array.from(new Set(
+      (attempts ?? []).flatMap(a => (Array.isArray(a.strong_areas) ? (a.strong_areas as string[]) : []))
+    )).slice(0, 10);
+
+    // Readiness scoring
+    const skillCompletion = (() => {
+      const known = new Set([...skills, ...detected].map(s => s.toLowerCase()));
+      const total = known.size + missing.length;
+      return total ? Math.round((known.size / total) * 100) : 40;
+    })();
+    const atsReadiness = atsScore ?? 50;
+    const interviewReadiness = quizAvg ?? 45;
+    const careerReadiness = Math.round((skillCompletion + atsReadiness + interviewReadiness) / 3);
+
+    const ctx = {
+      name: profile?.full_name ?? null,
+      target_role: role,
+      branch: profile?.branch ?? null,
+      graduation_year: profile?.graduation_year ?? null,
+      experience_level: profile?.experience_level ?? null,
+      current_skills: skills,
+      resume_detected_skills: detected,
+      missing_skills: missing,
+      ats_score: atsScore,
+      resume_summary: resume?.summary ?? null,
+      quiz_avg_percent: quizAvg,
+      weak_topics: weakTopics,
+      strong_topics: strongTopics,
+      recent_attempts: (attempts ?? []).slice(0, 6).map(a => ({
+        topic: a.topic, percentage: a.percentage, difficulty: a.difficulty,
+      })),
+    };
+
+    const json = await callAI({
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are PlacementIQ's Career Roadmap Architect. Generate a UNIQUE, deeply personalized week-by-week placement-prep roadmap tailored to the candidate's target role, current skills, ATS gaps, weaknesses, and quiz performance. Prioritize the candidate's MISSING SKILLS and WEAK TOPICS first. Recommend REAL, well-known learning resources with actual URLs (YouTube channels like freeCodeCamp/Fireship/Traversy, roadmap.sh, MDN, react.dev, spring.io, learn.microsoft.com, kaggle.com, leetcode.com, hackerrank.com, official docs). No two roadmaps for different candidates should look the same. Return ONLY valid JSON.",
+        },
+        {
+          role: "user",
+          content: `Generate a ${weeks}-week personalized roadmap for this candidate (JSON):
+${JSON.stringify(ctx)}
+
+REQUIREMENTS:
+- Tailor every week's focus to "${role}" using the candidate's skill gaps and weak topics.
+- Week 1-2 MUST aggressively cover missing/weak fundamentals.
+- Mid weeks: applied projects + practice. Last weeks: interview sprint + system design + mock interviews.
+- For each resource, include a real URL (https://...). Use trusted sources: roadmap.sh, MDN, react.dev, freecodecamp.org, youtube.com (real channels), leetcode.com, spring.io, learn.microsoft.com, kaggle.com, tableau.com, geeksforgeeks.org, official docs.
+- Include role-appropriate project recommendations with brief descriptions.
+- Be specific — reference the candidate's actual missing skills/weak topics by name in goals.
+
+Return STRICT JSON:
+{
+  "headline": "<one motivating sentence personalized to candidate>",
+  "summary": "<2-3 sentence analysis of where they stand and what this roadmap fixes>",
+  "focus_areas": ["...","...","..."],
+  "weeks": [
+    {
+      "week": 1,
+      "title": "...",
+      "learning_goals": ["...","..."],
+      "topics": ["...","..."],
+      "practice_tasks": ["...","..."],
+      "projects": [{ "name": "...", "description": "..." }],
+      "interview_prep": ["...","..."],
+      "resources": [
+        { "title": "...", "type": "youtube"|"docs"|"course"|"practice"|"certification"|"article", "url": "https://..." }
+      ]
+    }
+  ],
+  "recommended_projects": [
+    { "name": "...", "description": "...", "skills": ["...","..."] }
+  ],
+  "certifications": [
+    { "name": "...", "provider": "...", "url": "https://..." }
+  ]
+}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const raw = json?.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+    const weeksOut = (Array.isArray(parsed.weeks) ? parsed.weeks : []).slice(0, weeks).map((w: any, i: number) => ({
+      week: Number(w.week) || i + 1,
+      title: String(w.title ?? `Week ${i + 1}`),
+      learning_goals: (Array.isArray(w.learning_goals) ? w.learning_goals : []).map(String).slice(0, 6),
+      topics: (Array.isArray(w.topics) ? w.topics : []).map(String).slice(0, 10),
+      practice_tasks: (Array.isArray(w.practice_tasks) ? w.practice_tasks : []).map(String).slice(0, 6),
+      projects: (Array.isArray(w.projects) ? w.projects : []).slice(0, 4).map((p: any) => ({
+        name: String(p?.name ?? ""), description: String(p?.description ?? ""),
+      })).filter((p: any) => p.name),
+      interview_prep: (Array.isArray(w.interview_prep) ? w.interview_prep : []).map(String).slice(0, 6),
+      resources: (Array.isArray(w.resources) ? w.resources : []).slice(0, 8).map((r: any) => ({
+        title: String(r?.title ?? ""),
+        type: ["youtube","docs","course","practice","certification","article"].includes(r?.type) ? r.type : "article",
+        url: String(r?.url ?? ""),
+      })).filter((r: any) => r.title && r.url.startsWith("http")),
+    }));
+
+    return {
+      headline: String(parsed.headline ?? `Your ${role} roadmap`),
+      summary: String(parsed.summary ?? ""),
+      focus_areas: (Array.isArray(parsed.focus_areas) ? parsed.focus_areas : []).map(String).slice(0, 8),
+      weeks: weeksOut,
+      recommended_projects: (Array.isArray(parsed.recommended_projects) ? parsed.recommended_projects : [])
+        .slice(0, 8).map((p: any) => ({
+          name: String(p?.name ?? ""),
+          description: String(p?.description ?? ""),
+          skills: (Array.isArray(p?.skills) ? p.skills : []).map(String).slice(0, 8),
+        })).filter((p: any) => p.name),
+      certifications: (Array.isArray(parsed.certifications) ? parsed.certifications : [])
+        .slice(0, 6).map((c: any) => ({
+          name: String(c?.name ?? ""),
+          provider: String(c?.provider ?? ""),
+          url: String(c?.url ?? ""),
+        })).filter((c: any) => c.name),
+      readiness: {
+        career: careerReadiness,
+        skill_completion: skillCompletion,
+        ats: atsReadiness,
+        interview: interviewReadiness,
+      },
+      context: {
+        target_role: role,
+        ats_score: atsScore,
+        quiz_avg: quizAvg,
+        missing_skills: missing,
+        weak_topics: weakTopics,
+        strong_topics: strongTopics,
+      },
+    };
+  });
