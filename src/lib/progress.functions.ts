@@ -31,7 +31,7 @@ export const getProgressOverview = createServerFn({ method: "GET" })
     // ---- Latest ATS + skill gap ----
     const latestResume = resumes.length ? resumes[resumes.length - 1] : null;
     const atsScore = latestResume?.ats_score ?? 0;
-    const detectedSkills: string[] = (latestResume?.detected_skills as string[]) ?? (profile?.skills ?? []) ?? [];
+    const detectedSkills: string[] = (latestResume?.detected_skills as string[]) ?? (profile?.skills as string[]) ?? [];
     const missingSkills: string[] = (latestResume?.missing_skills as string[]) ?? [];
     const totalSkills = detectedSkills.length + missingSkills.length;
     const skillCompletion = totalSkills > 0 ? Math.round((detectedSkills.length / totalSkills) * 100) : 0;
