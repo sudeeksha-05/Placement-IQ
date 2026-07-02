@@ -76,9 +76,13 @@ function Dashboard() {
   const quizAvg = data?.breakdown.quizAvg ?? 0;
   const readiness = data?.readiness ?? 0;
   const streak = data?.streak ?? 0;
-  const hasResume = (data?.counts.resumes ?? 0) > 0;
+  const analyzedCount = data?.counts.analyzedResumes ?? 0;
+  const hasAnalyzedResume = analyzedCount > 0;
+  const hasResumeUpload = (data?.counts.resumes ?? 0) > 0;
   const hasQuizzes = (data?.counts.quizzes ?? 0) > 0;
-  const hasAnyActivity = hasResume || hasQuizzes || (data?.counts.interviews ?? 0) > 0 || (data?.counts.roadmapDone ?? 0) > 0;
+  const hasAnyActivity = hasAnalyzedResume || hasQuizzes || (data?.counts.interviews ?? 0) > 0 || (data?.counts.roadmapDone ?? 0) > 0;
+  const atsGrowth = data?.atsGrowth ?? null;
+  const atsTotalGrowth = data?.atsTotalGrowth ?? null;
 
   const weekly = (data?.weekly ?? []).map(d => ({ d: d.label, v: d.total }));
   const weeklyHasData = weekly.some(w => w.v > 0);
