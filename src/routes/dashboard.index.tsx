@@ -76,9 +76,13 @@ function Dashboard() {
   const quizAvg = data?.breakdown.quizAvg ?? 0;
   const readiness = data?.readiness ?? 0;
   const streak = data?.streak ?? 0;
-  const hasResume = (data?.counts.resumes ?? 0) > 0;
+  const analyzedCount = data?.counts.analyzedResumes ?? 0;
+  const hasAnalyzedResume = analyzedCount > 0;
+  const hasResumeUpload = (data?.counts.resumes ?? 0) > 0;
   const hasQuizzes = (data?.counts.quizzes ?? 0) > 0;
-  const hasAnyActivity = hasResume || hasQuizzes || (data?.counts.interviews ?? 0) > 0 || (data?.counts.roadmapDone ?? 0) > 0;
+  const hasAnyActivity = hasAnalyzedResume || hasQuizzes || (data?.counts.interviews ?? 0) > 0 || (data?.counts.roadmapDone ?? 0) > 0;
+  const atsGrowth = data?.atsGrowth ?? null;
+  const atsTotalGrowth = data?.atsTotalGrowth ?? null;
 
   const weekly = (data?.weekly ?? []).map(d => ({ d: d.label, v: d.total }));
   const weeklyHasData = weekly.some(w => w.v > 0);
@@ -107,8 +111,14 @@ function Dashboard() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="ATS Score"
-          value={hasResume ? String(ats) : "0"}
-          delta={hasResume ? `${ats}/100` : "Upload resume to start ATS analysis"}
+          value={hasAnalyzedResume ? String(ats) : "0"}
+          delta={
+            hasAnalyzedResume
+              ? (atsGrowth !== null && atsGrowth !== 0
+                  ? `${atsGrowth > 0 ? "+" : ""}${atsGrowth} since last version`
+                  : `${ats}/100 · V${analyzedCount}`)
+              : hasResumeUpload ? "Analyzing…" : "Upload resume to start ATS analysis"
+          }
           icon={FileText}
           accent="primary"
         />
@@ -194,9 +204,18 @@ function Dashboard() {
 
       <div className="grid lg:grid-cols-2 gap-4">
         <motion.div className="glass neon-border rounded-2xl p-6" whileHover={{ y: -2 }}>
-          <h3 className="font-display font-bold mb-1">ATS Score Improvement</h3>
-          <p className="text-xs text-muted-foreground mb-4">Across your resume scans</p>
-          {atsHistory.length > 0 ? (
+          <div className="flex items-start justify-between mb-1 gap-3">
+            <div>
+              <h3 className="font-display font-bold">ATS Score Improvement</h3>
+              <p className="text-xs text-muted-foreground">Across your resume versions</p>
+            </div>
+            {atsHistory.length >= 2 && atsTotalGrowth !== null && (
+              <span className={`text-xs px-3 py-1 rounded-full glass ${atsTotalGrowth >= 0 ? "text-neon-2" : "text-destructive"}`}>
+                {atsTotalGrowth >= 0 ? "+" : ""}{atsTotalGrowth} pts total
+              </span>
+            )}
+          </div>
+          {atsHistory.length >= 2 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={atsHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" />
@@ -210,7 +229,11 @@ function Dashboard() {
             <div className="h-[220px] grid place-items-center text-center">
               <div>
                 <FileText className="size-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Upload resume to start ATS analysis</p>
+                <p className="text-sm text-muted-foreground">
+                  {atsHistory.length === 0
+                    ? "Upload resume to start ATS analysis"
+                    : "Upload an improved resume version to track ATS progress"}
+                </p>
                 <Link to="/dashboard/ats" className="text-xs text-primary hover:underline mt-1 inline-block">Go to ATS Analyzer →</Link>
               </div>
             </div>

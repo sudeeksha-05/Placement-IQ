@@ -53,8 +53,17 @@ function ATS() {
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
+  // uploads used today (rolling 24h count from history)
+  const uploadsToday = history.filter((h) => {
+    const t = new Date(h.created_at).getTime();
+    return Date.now() - t < 24 * 60 * 60 * 1000;
+  }).length;
+  const dailyLimit = 3;
+  const limitReached = uploadsToday >= dailyLimit;
+
   const handleFile = async (file: File) => {
     if (!user) return;
+    if (limitReached) return toast.error(`Daily upload limit reached (${dailyLimit}/${dailyLimit}). Try again tomorrow.`);
     if (file.type !== "application/pdf") return toast.error("Please upload a PDF file");
     if (file.size > 5 * 1024 * 1024) return toast.error("Max file size is 5MB");
 
@@ -128,21 +137,27 @@ function ATS() {
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="glass neon-border rounded-2xl p-6"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="size-4 text-neon" />
-              <span className="text-xs uppercase tracking-widest text-neon-2">Upload resume</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-neon" />
+                <span className="text-xs uppercase tracking-widest text-neon-2">Upload resume</span>
+              </div>
+              <span className={`text-xs px-2.5 py-1 rounded-full glass ${limitReached ? "text-destructive" : "text-muted-foreground"}`}>
+                {uploadsToday}/{dailyLimit} uploads today
+              </span>
             </div>
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={(e) => { if (!limitReached) { e.preventDefault(); setDragOver(true); } }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => {
                 e.preventDefault(); setDragOver(false);
+                if (limitReached) return;
                 const f = e.dataTransfer.files?.[0]; if (f) handleFile(f);
               }}
-              onClick={() => !busy && fileRef.current?.click()}
+              onClick={() => !busy && !limitReached && fileRef.current?.click()}
               className={`glass-strong rounded-xl p-10 text-center cursor-pointer transition border-2 border-dashed ${
                 dragOver ? "border-neon bg-white/5" : "border-white/10 hover:border-neon/60 hover:bg-white/5"
-              } ${busy ? "pointer-events-none opacity-60" : ""}`}
+              } ${busy || limitReached ? "pointer-events-none opacity-60" : ""}`}
             >
               <input
                 ref={fileRef} type="file" accept="application/pdf" className="hidden"
@@ -154,11 +169,17 @@ function ATS() {
                   <p className="font-medium">{uploading ? "Uploading…" : "AI is analyzing your resume…"}</p>
                   <p className="text-xs text-muted-foreground mt-1">This usually takes 10–20 seconds</p>
                 </>
+              ) : limitReached ? (
+                <>
+                  <Upload className="size-8 mx-auto text-destructive mb-3" />
+                  <p className="font-medium">Daily upload limit reached ({dailyLimit}/{dailyLimit})</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try again tomorrow to track further ATS growth.</p>
+                </>
               ) : (
                 <>
                   <Upload className="size-8 mx-auto text-neon mb-3" />
                   <p className="font-medium">Drop your PDF here or click to browse</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF only · 5MB max</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF only · 5MB max · Version {history.length + 1}</p>
                 </>
               )}
             </div>

@@ -29,12 +29,17 @@ export const getProgressOverview = createServerFn({ method: "GET" })
     const logs = (activityRes.data ?? []) as any[];
 
     // ---- Latest ATS + skill gap ----
-    const latestResume = resumes.length ? resumes[resumes.length - 1] : null;
+    // Only ANALYZED resumes (must have an ats_score). Never fall back to profile.skills.
+    const analyzedResumes = resumes.filter((r) => typeof r.ats_score === "number" && r.ats_score !== null);
+    const latestResume = analyzedResumes.length ? analyzedResumes[analyzedResumes.length - 1] : null;
     const atsScore = latestResume?.ats_score ?? 0;
-    const detectedSkills: string[] = (latestResume?.detected_skills as string[]) ?? (profile?.skills as string[]) ?? [];
-    const missingSkills: string[] = (latestResume?.missing_skills as string[]) ?? [];
+    const detectedSkills: string[] = latestResume ? ((latestResume.detected_skills as string[]) ?? []) : [];
+    const missingSkills: string[] = latestResume ? ((latestResume.missing_skills as string[]) ?? []) : [];
     const totalSkills = detectedSkills.length + missingSkills.length;
-    const skillCompletion = totalSkills > 0 ? Math.round((detectedSkills.length / totalSkills) * 100) : 0;
+    // Skill completion contributes 0 until a resume is analyzed.
+    const skillCompletion = latestResume && totalSkills > 0
+      ? Math.round((detectedSkills.length / totalSkills) * 100)
+      : 0;
 
     // ---- Quiz performance ----
     const quizAvg = quizzes.length
@@ -141,11 +146,18 @@ export const getProgressOverview = createServerFn({ method: "GET" })
       skillProgress.push({ skill: m, value: 20 });
     }
 
-    // ---- ATS history trend ----
-    const atsHistory = resumes.map((r, i) => ({
-      w: `R${i + 1}`,
+    // ---- ATS history trend (only ANALYZED versions) ----
+    const atsHistory = analyzedResumes.map((r, i) => ({
+      w: `V${i + 1}`,
       v: r.ats_score ?? 0,
+      date: r.created_at,
     }));
+    const atsGrowth = analyzedResumes.length >= 2
+      ? (analyzedResumes[analyzedResumes.length - 1].ats_score ?? 0) - (analyzedResumes[analyzedResumes.length - 2].ats_score ?? 0)
+      : null;
+    const atsTotalGrowth = analyzedResumes.length >= 2
+      ? (analyzedResumes[analyzedResumes.length - 1].ats_score ?? 0) - (analyzedResumes[0].ats_score ?? 0)
+      : null;
 
     // ---- Streak (consecutive days with any activity) ----
     const activeDays = new Set<string>();
@@ -183,12 +195,15 @@ export const getProgressOverview = createServerFn({ method: "GET" })
       counts: {
         quizzes: quizzes.length,
         resumes: resumes.length,
+        analyzedResumes: analyzedResumes.length,
         interviews: interviewLogs.length,
         roadmapDone,
         roadmapTotal,
       },
       weekly: days,
       atsHistory,
+      atsGrowth,
+      atsTotalGrowth,
       topicAverages,
       strongTopics,
       weakTopics,
