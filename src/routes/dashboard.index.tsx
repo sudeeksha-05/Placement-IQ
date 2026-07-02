@@ -204,9 +204,18 @@ function Dashboard() {
 
       <div className="grid lg:grid-cols-2 gap-4">
         <motion.div className="glass neon-border rounded-2xl p-6" whileHover={{ y: -2 }}>
-          <h3 className="font-display font-bold mb-1">ATS Score Improvement</h3>
-          <p className="text-xs text-muted-foreground mb-4">Across your resume scans</p>
-          {atsHistory.length > 0 ? (
+          <div className="flex items-start justify-between mb-1 gap-3">
+            <div>
+              <h3 className="font-display font-bold">ATS Score Improvement</h3>
+              <p className="text-xs text-muted-foreground">Across your resume versions</p>
+            </div>
+            {atsHistory.length >= 2 && atsTotalGrowth !== null && (
+              <span className={`text-xs px-3 py-1 rounded-full glass ${atsTotalGrowth >= 0 ? "text-neon-2" : "text-destructive"}`}>
+                {atsTotalGrowth >= 0 ? "+" : ""}{atsTotalGrowth} pts total
+              </span>
+            )}
+          </div>
+          {atsHistory.length >= 2 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={atsHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 0.05)" />
@@ -220,7 +229,11 @@ function Dashboard() {
             <div className="h-[220px] grid place-items-center text-center">
               <div>
                 <FileText className="size-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Upload resume to start ATS analysis</p>
+                <p className="text-sm text-muted-foreground">
+                  {atsHistory.length === 0
+                    ? "Upload resume to start ATS analysis"
+                    : "Upload an improved resume version to track ATS progress"}
+                </p>
                 <Link to="/dashboard/ats" className="text-xs text-primary hover:underline mt-1 inline-block">Go to ATS Analyzer →</Link>
               </div>
             </div>
