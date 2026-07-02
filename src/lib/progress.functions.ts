@@ -29,12 +29,17 @@ export const getProgressOverview = createServerFn({ method: "GET" })
     const logs = (activityRes.data ?? []) as any[];
 
     // ---- Latest ATS + skill gap ----
-    const latestResume = resumes.length ? resumes[resumes.length - 1] : null;
+    // Only ANALYZED resumes (must have an ats_score). Never fall back to profile.skills.
+    const analyzedResumes = resumes.filter((r) => typeof r.ats_score === "number" && r.ats_score !== null);
+    const latestResume = analyzedResumes.length ? analyzedResumes[analyzedResumes.length - 1] : null;
     const atsScore = latestResume?.ats_score ?? 0;
-    const detectedSkills: string[] = (latestResume?.detected_skills as string[]) ?? (profile?.skills as string[]) ?? [];
-    const missingSkills: string[] = (latestResume?.missing_skills as string[]) ?? [];
+    const detectedSkills: string[] = latestResume ? ((latestResume.detected_skills as string[]) ?? []) : [];
+    const missingSkills: string[] = latestResume ? ((latestResume.missing_skills as string[]) ?? []) : [];
     const totalSkills = detectedSkills.length + missingSkills.length;
-    const skillCompletion = totalSkills > 0 ? Math.round((detectedSkills.length / totalSkills) * 100) : 0;
+    // Skill completion contributes 0 until a resume is analyzed.
+    const skillCompletion = latestResume && totalSkills > 0
+      ? Math.round((detectedSkills.length / totalSkills) * 100)
+      : 0;
 
     // ---- Quiz performance ----
     const quizAvg = quizzes.length
