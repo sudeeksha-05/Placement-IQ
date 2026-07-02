@@ -111,8 +111,14 @@ function Dashboard() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="ATS Score"
-          value={hasResume ? String(ats) : "0"}
-          delta={hasResume ? `${ats}/100` : "Upload resume to start ATS analysis"}
+          value={hasAnalyzedResume ? String(ats) : "0"}
+          delta={
+            hasAnalyzedResume
+              ? (atsGrowth !== null && atsGrowth !== 0
+                  ? `${atsGrowth > 0 ? "+" : ""}${atsGrowth} since last version`
+                  : `${ats}/100 · V${analyzedCount}`)
+              : hasResumeUpload ? "Analyzing…" : "Upload resume to start ATS analysis"
+          }
           icon={FileText}
           accent="primary"
         />
