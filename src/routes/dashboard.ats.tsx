@@ -53,8 +53,17 @@ function ATS() {
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
+  // uploads used today (rolling 24h count from history)
+  const uploadsToday = history.filter((h) => {
+    const t = new Date(h.created_at).getTime();
+    return Date.now() - t < 24 * 60 * 60 * 1000;
+  }).length;
+  const dailyLimit = 3;
+  const limitReached = uploadsToday >= dailyLimit;
+
   const handleFile = async (file: File) => {
     if (!user) return;
+    if (limitReached) return toast.error(`Daily upload limit reached (${dailyLimit}/${dailyLimit}). Try again tomorrow.`);
     if (file.type !== "application/pdf") return toast.error("Please upload a PDF file");
     if (file.size > 5 * 1024 * 1024) return toast.error("Max file size is 5MB");
 
