@@ -146,11 +146,18 @@ export const getProgressOverview = createServerFn({ method: "GET" })
       skillProgress.push({ skill: m, value: 20 });
     }
 
-    // ---- ATS history trend ----
-    const atsHistory = resumes.map((r, i) => ({
-      w: `R${i + 1}`,
+    // ---- ATS history trend (only ANALYZED versions) ----
+    const atsHistory = analyzedResumes.map((r, i) => ({
+      w: `V${i + 1}`,
       v: r.ats_score ?? 0,
+      date: r.created_at,
     }));
+    const atsGrowth = analyzedResumes.length >= 2
+      ? (analyzedResumes[analyzedResumes.length - 1].ats_score ?? 0) - (analyzedResumes[analyzedResumes.length - 2].ats_score ?? 0)
+      : null;
+    const atsTotalGrowth = analyzedResumes.length >= 2
+      ? (analyzedResumes[analyzedResumes.length - 1].ats_score ?? 0) - (analyzedResumes[0].ats_score ?? 0)
+      : null;
 
     // ---- Streak (consecutive days with any activity) ----
     const activeDays = new Set<string>();
