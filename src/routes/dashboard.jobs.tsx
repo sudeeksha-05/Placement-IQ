@@ -15,7 +15,7 @@ import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/jobs")({
   head: () => ({ meta: [{ title: "Job Match — PlacementIQ" }] }),
-  component: Jobs;
+  component: Jobs,
 });
 
 type Filters = {
