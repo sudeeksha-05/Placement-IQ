@@ -40,9 +40,10 @@ export const analyzeSkillGap = createServerFn({ method: "POST" })
     ]);
     const latest = resumes?.[0] ?? null;
 
-    const detected: string[] = latest?.detected_skills ?? [];
-    const profileSkills: string[] = profile?.skills ?? [];
+    const detected: string[] = (Array.isArray(latest?.detected_skills) ? latest.detected_skills : []) as string[];
+    const profileSkills: string[] = (Array.isArray(profile?.skills) ? profile.skills : []) as string[];
     const allUserSkills = Array.from(new Set([...detected, ...profileSkills]));
+
 
     const prompt = `Perform a rigorous skill gap analysis for a candidate targeting the role of "${data.targetRole}".
 
