@@ -468,3 +468,192 @@ Return STRICT JSON:
       },
     };
   });
+
+/* ---------------- AI LIVE INTERVIEW (voice-based) ---------------- */
+const LIVE_TYPES = ["Technical","HR","Coding","System Design","Behavioral","Project Discussion","Managerial","Final HR","Mixed"] as const;
+const LIVE_DIFF = ["Beginner","Intermediate","Advanced","FAANG"] as const;
+
+export const liveInterviewNext = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({
+    role: z.string().min(1).max(80),
+    type: z.enum(LIVE_TYPES),
+    difficulty: z.enum(LIVE_DIFF),
+    company: z.string().max(60).optional(),
+    language: z.string().max(30).optional(),
+    turnsRemaining: z.number().int().min(0).max(30),
+    history: z.array(z.object({
+      speaker: z.enum(["interviewer","candidate"]),
+      text: z.string().max(4000),
+    })).max(60),
+  }))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const [{ data: profile }, { data: resume }] = await Promise.all([
+      supabaseAdmin.from("profiles")
+        .select("full_name,target_role,skills,branch,graduation_year,experience_level,college,bio")
+        .eq("id", userId).maybeSingle(),
+      supabaseAdmin.from("resumes")
+        .select("target_role,ats_score,detected_skills,missing_skills,summary,parsed_data")
+        .eq("user_id", userId).eq("status", "complete")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+
+    const parsed = (resume?.parsed_data ?? {}) as any;
+    const candidate = {
+      name: profile?.full_name ?? "Candidate",
+      target_role: data.role,
+      branch: profile?.branch ?? null,
+      experience_level: profile?.experience_level ?? null,
+      skills: profile?.skills ?? [],
+      resume_skills: resume?.detected_skills ?? [],
+      missing_skills: resume?.missing_skills ?? [],
+      projects: parsed?.projects ?? parsed?.Projects ?? [],
+      experience: parsed?.experience ?? parsed?.Experience ?? [],
+      education: parsed?.education ?? parsed?.Education ?? profile?.college ?? null,
+      certifications: parsed?.certifications ?? [],
+      resume_summary: resume?.summary ?? null,
+      ats_score: resume?.ats_score ?? null,
+    };
+
+    const isFirst = data.history.length === 0;
+    const isLast = data.turnsRemaining <= 1;
+
+    const sys = `You are an AI voice interviewer conducting a ${data.difficulty}-level ${data.type} interview${data.company ? ` in the style of ${data.company}` : ""} for a "${data.role}" role. You are speaking OUT LOUD — write natural conversational speech, not text. Rules:
+- Speak like a real recruiter/engineer: warm, professional, concise (1-3 sentences).
+- Ask ONE question or follow-up at a time. NO bullet lists, NO markdown, NO enumerations.
+- Use the candidate's actual resume, projects, and skills. Reference them by name.
+- ${data.type === "Coding" ? "Describe coding problems verbally. Ask about approach, complexity, edge cases. Do not dictate code." : ""}
+- ${data.type === "Project Discussion" ? "Drill deep into the candidate's actual listed projects." : ""}
+- ${data.type === "HR" || data.type === "Behavioral" || data.type === "Managerial" || data.type === "Final HR" ? "Focus on behavior, motivation, teamwork, leadership. Use situational prompts." : ""}
+- Ask follow-ups based on what the candidate just said. If they mentioned a tool/decision, probe why.
+- ${data.language && data.language !== "English" ? `Respond in ${data.language}.` : "Respond in English."}
+Return ONLY valid JSON: { "say": "<what to speak next>", "phase": "greeting"|"question"|"followup"|"closing" }`;
+
+    let userMsg: string;
+    if (isFirst) {
+      userMsg = `Begin the interview. Greet ${candidate.name} warmly, briefly introduce yourself as the ${data.type} interviewer${data.company ? ` from ${data.company}` : ""}, briefly outline what this ${data.type} round will cover, then ask your first question. Keep the whole utterance under 60 words.\n\nCANDIDATE CONTEXT (JSON):\n${JSON.stringify(candidate)}`;
+    } else if (isLast) {
+      userMsg = `This is your final turn. Thank the candidate, mention 1 specific thing they discussed, and close the interview politely. No new questions.\n\nCANDIDATE CONTEXT:\n${JSON.stringify(candidate)}\n\nTRANSCRIPT SO FAR:\n${JSON.stringify(data.history)}`;
+    } else {
+      userMsg = `Continue the interview. Acknowledge briefly (optional, 1 short phrase), then either ask a natural follow-up to what the candidate just said, OR move to the next question. Keep to 1-2 sentences.\n\nCANDIDATE CONTEXT:\n${JSON.stringify(candidate)}\n\nTRANSCRIPT SO FAR:\n${JSON.stringify(data.history)}`;
+    }
+
+    const json = await callAI({
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: userMsg },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = json?.choices?.[0]?.message?.content ?? "{}";
+    let out: any; try { out = JSON.parse(raw); } catch { out = {}; }
+    const say = String(out.say ?? "").trim() || "Thank you.";
+    const phase = ["greeting","question","followup","closing"].includes(out.phase) ? out.phase : (isFirst ? "greeting" : isLast ? "closing" : "question");
+    return { say, phase, done: isLast };
+  });
+
+export const liveInterviewReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({
+    role: z.string().min(1).max(80),
+    type: z.enum(LIVE_TYPES),
+    difficulty: z.enum(LIVE_DIFF),
+    company: z.string().max(60).optional(),
+    durationSec: z.number().int().min(0),
+    transcript: z.array(z.object({
+      speaker: z.enum(["interviewer","candidate"]),
+      text: z.string().max(4000),
+    })).min(1).max(80),
+  }))
+  .handler(async ({ data }) => {
+    const sys = `You are a senior interview evaluator. Analyze the FULL transcript and produce a strict, honest, actionable report. Return ONLY valid JSON matching the schema exactly.`;
+    const userMsg = `Round: ${data.type} | Role: ${data.role} | Difficulty: ${data.difficulty}${data.company ? ` | Company style: ${data.company}` : ""} | Duration: ${Math.round(data.durationSec/60)} min
+
+TRANSCRIPT (JSON):
+${JSON.stringify(data.transcript)}
+
+Return JSON:
+{
+  "scores": {
+    "overall": 0-100,
+    "technical": 0-100,
+    "communication": 0-100,
+    "confidence": 0-100,
+    "hr": 0-100,
+    "problem_solving": 0-100,
+    "project_knowledge": 0-100,
+    "voice_clarity": 0-100,
+    "professionalism": 0-100
+  },
+  "verdict": "<2 sentence summary>",
+  "strengths": ["...","...","..."],
+  "weaknesses": ["...","...","..."],
+  "missed_concepts": ["..."],
+  "incorrect_answers": [{ "question": "...", "issue": "..." }],
+  "suggested_improvements": ["..."],
+  "learning_resources": [{ "title": "...", "url": "https://...", "type": "youtube|docs|course|practice" }],
+  "recommended_projects": ["..."],
+  "suggested_certifications": [{ "name": "...", "provider": "...", "url": "https://..." }],
+  "topics_to_revise": ["..."],
+  "speech_analysis": {
+    "pace": "slow|good|fast",
+    "filler_words": ["um","like"],
+    "tone": "...",
+    "energy": "low|medium|high",
+    "tips": ["..."]
+  },
+  "readiness_percent": 0-100
+}
+Use REAL URLs (roadmap.sh, MDN, freecodecamp.org, leetcode.com, coursera.org, learn.microsoft.com, official docs).`;
+
+    const json = await callAI({
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: userMsg },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = json?.choices?.[0]?.message?.content ?? "{}";
+    let p: any; try { p = JSON.parse(raw); } catch { p = {}; }
+
+    const clamp = (n: any) => Math.max(0, Math.min(100, parseInt(n, 10) || 0));
+    const s = p.scores ?? {};
+    return {
+      scores: {
+        overall: clamp(s.overall),
+        technical: clamp(s.technical),
+        communication: clamp(s.communication),
+        confidence: clamp(s.confidence),
+        hr: clamp(s.hr),
+        problem_solving: clamp(s.problem_solving),
+        project_knowledge: clamp(s.project_knowledge),
+        voice_clarity: clamp(s.voice_clarity),
+        professionalism: clamp(s.professionalism),
+      },
+      verdict: String(p.verdict ?? ""),
+      strengths: (Array.isArray(p.strengths) ? p.strengths : []).map(String).slice(0, 6),
+      weaknesses: (Array.isArray(p.weaknesses) ? p.weaknesses : []).map(String).slice(0, 6),
+      missed_concepts: (Array.isArray(p.missed_concepts) ? p.missed_concepts : []).map(String).slice(0, 8),
+      incorrect_answers: (Array.isArray(p.incorrect_answers) ? p.incorrect_answers : []).slice(0, 6).map((x: any) => ({
+        question: String(x?.question ?? ""), issue: String(x?.issue ?? ""),
+      })).filter((x: any) => x.question),
+      suggested_improvements: (Array.isArray(p.suggested_improvements) ? p.suggested_improvements : []).map(String).slice(0, 8),
+      learning_resources: (Array.isArray(p.learning_resources) ? p.learning_resources : []).slice(0, 8).map((r: any) => ({
+        title: String(r?.title ?? ""), url: String(r?.url ?? ""), type: String(r?.type ?? "article"),
+      })).filter((r: any) => r.title && r.url.startsWith("http")),
+      recommended_projects: (Array.isArray(p.recommended_projects) ? p.recommended_projects : []).map(String).slice(0, 6),
+      suggested_certifications: (Array.isArray(p.suggested_certifications) ? p.suggested_certifications : []).slice(0, 6).map((c: any) => ({
+        name: String(c?.name ?? ""), provider: String(c?.provider ?? ""), url: String(c?.url ?? ""),
+      })).filter((c: any) => c.name),
+      topics_to_revise: (Array.isArray(p.topics_to_revise) ? p.topics_to_revise : []).map(String).slice(0, 10),
+      speech_analysis: {
+        pace: ["slow","good","fast"].includes(p?.speech_analysis?.pace) ? p.speech_analysis.pace : "good",
+        filler_words: (Array.isArray(p?.speech_analysis?.filler_words) ? p.speech_analysis.filler_words : []).map(String).slice(0, 8),
+        tone: String(p?.speech_analysis?.tone ?? ""),
+        energy: ["low","medium","high"].includes(p?.speech_analysis?.energy) ? p.speech_analysis.energy : "medium",
+        tips: (Array.isArray(p?.speech_analysis?.tips) ? p.speech_analysis.tips : []).map(String).slice(0, 6),
+      },
+      readiness_percent: clamp(p.readiness_percent),
+    };
+  });
