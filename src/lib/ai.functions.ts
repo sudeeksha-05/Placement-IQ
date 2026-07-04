@@ -494,12 +494,12 @@ export const liveInterviewNext = createServerFn({ method: "POST" })
         .select("full_name,target_role,skills,branch,graduation_year,experience_level,college,bio")
         .eq("id", userId).maybeSingle(),
       supabaseAdmin.from("resumes")
-        .select("target_role,ats_score,detected_skills,missing_skills,summary,parsed_data")
+        .select("target_role,ats_score,detected_skills,missing_skills,summary,suggestions")
         .eq("user_id", userId).eq("status", "complete")
         .order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    const parsed = (resume?.parsed_data ?? {}) as any;
+    const suggestions = (resume?.suggestions ?? {}) as any;
     const candidate = {
       name: profile?.full_name ?? "Candidate",
       target_role: data.role,
@@ -508,10 +508,9 @@ export const liveInterviewNext = createServerFn({ method: "POST" })
       skills: profile?.skills ?? [],
       resume_skills: resume?.detected_skills ?? [],
       missing_skills: resume?.missing_skills ?? [],
-      projects: parsed?.projects ?? parsed?.Projects ?? [],
-      experience: parsed?.experience ?? parsed?.Experience ?? [],
-      education: parsed?.education ?? parsed?.Education ?? profile?.college ?? null,
-      certifications: parsed?.certifications ?? [],
+      projects: suggestions?.projects ?? [],
+      experience: suggestions?.experience ?? [],
+      education: profile?.college ?? null,
       resume_summary: resume?.summary ?? null,
       ats_score: resume?.ats_score ?? null,
     };
