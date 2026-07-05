@@ -664,9 +664,24 @@ function Panel({ title, items, tone }: { title: string; items?: string[]; tone?:
 /* ================================================================== */
 function Interview() {
   return (
-    <DashboardShell title="Mock Interview" subtitle="Practice with AI · text demo or full voice-based live simulation">
-      <DemoInterview />
-      <LiveInterview />
+    <DashboardShell title="Mock Interview" subtitle="Practice with AI · manual typed round or full voice + camera live simulation">
+      <Tabs defaultValue="manual" className="w-full">
+        <TabsList className="glass rounded-xl p-1 h-auto">
+          <TabsTrigger value="manual" className="px-4 py-2 text-sm data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
+            <MessageSquareCode className="size-4 mr-1.5" /> Manual Interview
+          </TabsTrigger>
+          <TabsTrigger value="live" className="px-4 py-2 text-sm data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
+            <Radio className="size-4 mr-1.5" /> AI Live Interview
+            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-neon/20 text-neon">LIVE</span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="manual" className="mt-6">
+          <DemoInterview />
+        </TabsContent>
+        <TabsContent value="live" className="mt-6">
+          <LiveInterview />
+        </TabsContent>
+      </Tabs>
     </DashboardShell>
   );
 }
