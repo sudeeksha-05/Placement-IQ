@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Video, Mic, MicOff, MessageSquareCode, Play, Loader2, Send, RotateCcw, Radio, PhoneOff, Sparkles, Volume2, Award, Download } from "lucide-react";
+import { Video, Mic, MicOff, MessageSquareCode, Play, Loader2, Send, RotateCcw, Radio, PhoneOff, Sparkles, Volume2, Award, Download, Camera, CameraOff, Activity, Eye, Sun } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { interviewTurn, liveInterviewNext, liveInterviewReport } from "@/lib/ai.functions";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/interview")({
@@ -195,6 +196,7 @@ function LiveInterview() {
   const [company, setCompany] = useState("Any");
   const [language, setLanguage] = useState("English");
   const [durationMin, setDurationMin] = useState(10);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
 
   const [active, setActive] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
@@ -204,6 +206,15 @@ function LiveInterview() {
   const [elapsed, setElapsed] = useState(0);
   const [report, setReport] = useState<any | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [mouthOpen, setMouthOpen] = useState(0);
+
+  // Camera guidance
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [camReady, setCamReady] = useState(false);
+  const [guidance, setGuidance] = useState<{ lighting: "good"|"ok"|"low"; centering: "good"|"ok"|"off"; motion: "calm"|"active"|"high"; tips: string[] }>({
+    lighting: "ok", centering: "ok", motion: "calm", tips: [],
+  });
 
   const startedAt = useRef<number>(0);
   const turnsRemaining = useRef<number>(0);
@@ -220,6 +231,78 @@ function LiveInterview() {
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt.current) / 1000)), 500);
     return () => clearInterval(t);
   }, [active]);
+
+  // camera guidance loop (lightweight: brightness + face box heuristic + motion)
+  useEffect(() => {
+    if (!active || !cameraEnabled || !camReady) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 160; canvas.height = 120;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    let prev: Uint8ClampedArray | null = null;
+    const iv = setInterval(() => {
+      const v = videoRef.current;
+      if (!v || !ctx || v.videoWidth === 0) return;
+      try {
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = img.data;
+        // Brightness + skin-tone centroid + motion
+        let sum = 0;
+        let sx = 0, sy = 0, sc = 0;
+        let motion = 0;
+        for (let y = 0; y < canvas.height; y += 2) {
+          for (let x = 0; x < canvas.width; x += 2) {
+            const i = (y * canvas.width + x) * 4;
+            const r = d[i], g = d[i+1], b = d[i+2];
+            const lum = (r*299 + g*587 + b*114) / 1000;
+            sum += lum;
+            // rough skin detection
+            if (r > 95 && g > 40 && b > 20 && r > g && r > b && Math.abs(r-g) > 15) {
+              sx += x; sy += y; sc++;
+            }
+            if (prev) {
+              const dl = Math.abs(lum - ((prev[i]*299 + prev[i+1]*587 + prev[i+2]*114)/1000));
+              motion += dl;
+            }
+          }
+        }
+        const pxCount = (canvas.width/2) * (canvas.height/2);
+        const brightness = sum / pxCount;
+        const motionAvg = prev ? motion / pxCount : 0;
+        prev = new Uint8ClampedArray(d);
+
+        const lighting: "good"|"ok"|"low" = brightness > 110 ? "good" : brightness > 65 ? "ok" : "low";
+        let centering: "good"|"ok"|"off" = "off";
+        const tips: string[] = [];
+        if (sc > 40) {
+          const cx = sx / sc / canvas.width;   // 0..1
+          const cy = sy / sc / canvas.height;
+          const dx = Math.abs(cx - 0.5);
+          const dy = Math.abs(cy - 0.45);
+          centering = dx < 0.12 && dy < 0.15 ? "good" : dx < 0.22 && dy < 0.25 ? "ok" : "off";
+          if (cx < 0.35) tips.push("Move slightly to your right — face is off to the left.");
+          else if (cx > 0.65) tips.push("Move slightly to your left — face is off to the right.");
+          if (cy > 0.65) tips.push("Sit up straighter — you're low in the frame.");
+        } else {
+          tips.push("Face not detected — center yourself in the camera.");
+        }
+        if (lighting === "low") tips.push("Improve lighting — face a window or add a lamp.");
+        else if (lighting === "ok") tips.push("Lighting is okay — brighter would look more confident.");
+        const motionState: "calm"|"active"|"high" = motionAvg < 4 ? "calm" : motionAvg < 12 ? "active" : "high";
+        if (motionState === "high") tips.push("Reduce movement — try to stay steady while answering.");
+
+        setGuidance({ lighting, centering, motion: motionState, tips: tips.slice(0, 3) });
+      } catch { /* ignore */ }
+    }, 1500);
+    return () => clearInterval(iv);
+  }, [active, cameraEnabled, camReady]);
+
+  // lip-sync animation while speaking
+  useEffect(() => {
+    if (status !== "speaking") { setMouthOpen(0); return; }
+    const iv = setInterval(() => setMouthOpen(Math.random() * 0.9 + 0.1), 90);
+    return () => clearInterval(iv);
+  }, [status]);
 
   const supportsSTT = useMemo(() => typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window), []);
 
@@ -285,10 +368,34 @@ function LiveInterview() {
     try { recognitionRef.current?.stop(); } catch {}
   };
 
+  const startCamera = useCallback(async () => {
+    if (!cameraEnabled) return true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" }, audio: false });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+        setCamReady(true);
+      }
+      return true;
+    } catch {
+      toast.error("Camera permission denied — continuing without video guidance.");
+      setCameraEnabled(false);
+      return true;
+    }
+  }, [cameraEnabled]);
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCamReady(false);
+  }, []);
+
   const runConversation = async (openingMs: LiveMsg[]) => {
     let history = [...openingMs];
     while (activeRef.current && turnsRemaining.current > 0) {
-      // AI turn
       setStatus("thinking");
       let ai;
       try {
@@ -314,9 +421,7 @@ function LiveInterview() {
       if (ai.done || turnsRemaining.current <= 0) break;
       if (!activeRef.current) break;
 
-      // Candidate turn (unless muted -> pause and skip listening)
       if (mutedRef.current) {
-        // wait until unmuted
         while (activeRef.current && mutedRef.current) {
           await new Promise(r => setTimeout(r, 300));
         }
@@ -328,11 +433,11 @@ function LiveInterview() {
       history = [...history, candMsg];
       setTranscript(t => [...t, candMsg]);
     }
-    // finalize
     setStatus("idle");
     if (activeRef.current) await finalizeReport(history);
     activeRef.current = false;
     setActive(false);
+    stopCamera();
   };
 
   const finalizeReport = async (history: LiveMsg[]) => {
@@ -365,9 +470,9 @@ function LiveInterview() {
       toast.error("Microphone permission is required.");
       return;
     }
+    await startCamera();
     setReport(null); setTranscript([]); setElapsed(0);
     startedAt.current = Date.now();
-    // ~1 turn per minute (question+answer). min 4 turns.
     turnsRemaining.current = Math.max(4, durationMin);
     activeRef.current = true;
     setActive(true);
@@ -381,6 +486,7 @@ function LiveInterview() {
     try { synth?.cancel(); } catch {}
     setStatus("idle");
     setActive(false);
+    stopCamera();
     if (transcriptRef.current.length > 0 && !report) {
       finalizeReport(transcriptRef.current);
     }
@@ -395,19 +501,37 @@ function LiveInterview() {
     URL.revokeObjectURL(url);
   };
 
+  // Live voice metrics derived from candidate transcript
+  const voiceMetrics = useMemo(() => {
+    const words = transcript.filter(m => m.speaker === "candidate").flatMap(m => m.text.split(/\s+/).filter(Boolean));
+    const total = words.length;
+    const fillers = ["um","uh","like","basically","actually","you","know","so","literally","kinda","sorta"];
+    const fillerCount = words.filter(w => fillers.includes(w.toLowerCase().replace(/[.,?!]/g,""))).length;
+    const speakingSec = Math.max(1, elapsed * 0.55);
+    const wpm = Math.round((total / speakingSec) * 60);
+    const fillerPct = total ? Math.round((fillerCount / total) * 100) : 0;
+    return { wpm, fillerCount, fillerPct, total };
+  }, [transcript, elapsed]);
+
   const mmss = (s: number) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
   const statusColor = status === "speaking" ? "bg-neon" : status === "listening" ? "bg-emerald-400" : status === "thinking" ? "bg-amber-400" : "bg-muted-foreground/40";
   const statusLabel = status === "speaking" ? "Speaking" : status === "listening" ? "Listening" : status === "thinking" ? "Thinking" : "Idle";
 
+  const tone = (v: "good"|"ok"|"low"|"off"|"calm"|"active"|"high") => {
+    if (v === "good" || v === "calm") return "text-emerald-400 bg-emerald-400/10";
+    if (v === "ok" || v === "active") return "text-amber-400 bg-amber-400/10";
+    return "text-orange-400 bg-orange-400/10";
+  };
+
   return (
-    <section className="mt-10">
+    <section>
       <div className="flex items-center gap-3 mb-4">
         <div className="size-10 rounded-xl bg-gradient-primary grid place-items-center glow">
           <Radio className="size-5 text-white" />
         </div>
         <div>
           <h2 className="font-display font-bold text-2xl">AI Live Interview</h2>
-          <p className="text-sm text-muted-foreground">Voice-based, resume-personalized, real-time evaluation</p>
+          <p className="text-sm text-muted-foreground">Voice + camera, resume-personalized, real-time coaching</p>
         </div>
       </div>
 
@@ -433,6 +557,14 @@ function LiveInterview() {
             <Field label={`Duration (${durationMin} min)`}>
               <input type="range" min={4} max={20} value={durationMin} onChange={e => setDurationMin(parseInt(e.target.value,10))} className="w-full" />
             </Field>
+          </div>
+          <div className="mt-4 flex items-center gap-2">
+            <button onClick={() => setCameraEnabled(v => !v)}
+              className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${cameraEnabled ? "text-emerald-400" : "text-muted-foreground"}`}>
+              {cameraEnabled ? <Camera className="size-3" /> : <CameraOff className="size-3" />}
+              {cameraEnabled ? "Camera on" : "Camera off"}
+            </button>
+            <span className="text-xs text-muted-foreground">Camera enables live coaching on posture, framing & lighting.</span>
           </div>
           <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
             <p className="text-xs text-muted-foreground">
@@ -467,32 +599,95 @@ function LiveInterview() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 flex flex-col items-center justify-center py-6">
+          <div className="grid lg:grid-cols-12 gap-4">
+            {/* Interviewer avatar */}
+            <div className="lg:col-span-4 glass rounded-xl p-4 flex flex-col items-center justify-center min-h-[280px] relative overflow-hidden">
+              <div className="absolute top-2 left-2 text-[10px] uppercase tracking-widest text-neon-2">AI Interviewer</div>
               <div className="relative">
                 <motion.div
-                  animate={{ scale: status === "speaking" ? [1, 1.08, 1] : status === "listening" ? [1, 1.04, 1] : 1 }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                  className="size-40 rounded-full bg-gradient-primary grid place-items-center glow"
+                  animate={{ scale: status === "speaking" ? [1, 1.04, 1] : 1 }}
+                  transition={{ duration: 0.9, repeat: Infinity }}
+                  className="size-36 rounded-full bg-gradient-primary grid place-items-center glow relative"
                 >
-                  <Volume2 className="size-14 text-white" />
+                  {/* Simple face with lip-sync mouth */}
+                  <svg viewBox="0 0 100 100" className="size-28">
+                    <circle cx="35" cy="42" r="4" fill="white" />
+                    <circle cx="65" cy="42" r="4" fill="white" />
+                    <motion.ellipse
+                      cx="50"
+                      cy="65"
+                      rx="12"
+                      ry={status === "speaking" ? 3 + mouthOpen * 7 : status === "listening" ? 2 : 4}
+                      fill="white"
+                    />
+                  </svg>
+                  <div className={`absolute inset-0 rounded-full ${status === "speaking" ? "ring-4 ring-primary/40 animate-ping" : ""}`} />
                 </motion.div>
-                <div className={`absolute inset-0 rounded-full ${status === "speaking" ? "ring-4 ring-primary/40 animate-ping" : ""}`} />
               </div>
-              <p className="mt-4 text-sm font-semibold">AI Interviewer</p>
-              <p className="text-xs text-muted-foreground">{statusLabel}…</p>
+              <p className="mt-3 text-sm font-semibold flex items-center gap-1.5">
+                <Volume2 className="size-3.5" /> {statusLabel}…
+              </p>
               {status === "listening" && (
-                <button onClick={stopListeningEarly} className="mt-4 text-xs glass rounded-full px-3 py-1.5">
+                <button onClick={stopListeningEarly} className="mt-3 text-xs glass rounded-full px-3 py-1.5">
                   I'm done answering
                 </button>
               )}
             </div>
 
-            <div className="lg:col-span-2 glass rounded-xl p-4 max-h-[55vh] overflow-y-auto">
+            {/* Camera + guidance */}
+            <div className="lg:col-span-4 glass rounded-xl p-4 flex flex-col min-h-[280px]">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] uppercase tracking-widest text-neon-2">Your camera</div>
+                <div className={`text-[10px] px-2 py-0.5 rounded-full ${camReady ? "bg-emerald-400/10 text-emerald-400" : "bg-muted-foreground/10 text-muted-foreground"}`}>
+                  {camReady ? "Live" : cameraEnabled ? "Starting…" : "Off"}
+                </div>
+              </div>
+              <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video">
+                <video ref={videoRef} playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                {!camReady && (
+                  <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
+                    {cameraEnabled ? "Waiting for camera…" : "Camera disabled"}
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+                <div className={`rounded-lg px-2 py-1.5 flex items-center gap-1.5 ${tone(guidance.lighting)}`}>
+                  <Sun className="size-3" /> Light: {guidance.lighting}
+                </div>
+                <div className={`rounded-lg px-2 py-1.5 flex items-center gap-1.5 ${tone(guidance.centering)}`}>
+                  <Eye className="size-3" /> Frame: {guidance.centering}
+                </div>
+                <div className={`rounded-lg px-2 py-1.5 flex items-center gap-1.5 ${tone(guidance.motion)}`}>
+                  <Activity className="size-3" /> Motion: {guidance.motion}
+                </div>
+              </div>
+              {guidance.tips.length > 0 && (
+                <ul className="mt-2 space-y-0.5 text-[11px] text-muted-foreground list-disc pl-4">
+                  {guidance.tips.map((t, i) => <li key={i}>{t}</li>)}
+                </ul>
+              )}
+              <div className="mt-auto pt-3 grid grid-cols-3 gap-2 text-[11px]">
+                <div className="glass rounded-lg px-2 py-1.5 text-center">
+                  <div className="text-muted-foreground text-[9px] uppercase">WPM</div>
+                  <div className="font-bold">{voiceMetrics.wpm || 0}</div>
+                </div>
+                <div className="glass rounded-lg px-2 py-1.5 text-center">
+                  <div className="text-muted-foreground text-[9px] uppercase">Fillers</div>
+                  <div className={`font-bold ${voiceMetrics.fillerPct > 8 ? "text-orange-400" : "text-emerald-400"}`}>{voiceMetrics.fillerCount}</div>
+                </div>
+                <div className="glass rounded-lg px-2 py-1.5 text-center">
+                  <div className="text-muted-foreground text-[9px] uppercase">Words</div>
+                  <div className="font-bold">{voiceMetrics.total}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Transcript */}
+            <div className="lg:col-span-4 glass rounded-xl p-4 max-h-[420px] overflow-y-auto">
               <h3 className="text-xs uppercase tracking-widest text-neon-2 mb-3">Live transcript</h3>
               <div className="space-y-3">
                 {transcript.map((m, i) => (
-                  <div key={i} className={`text-sm ${m.speaker === "interviewer" ? "" : "pl-6"}`}>
+                  <div key={i} className={`text-sm ${m.speaker === "interviewer" ? "" : "pl-4 border-l-2 border-emerald-400/30"}`}>
                     <span className={`text-xs font-semibold ${m.speaker === "interviewer" ? "text-neon-2" : "text-emerald-400"}`}>
                       {m.speaker === "interviewer" ? "Interviewer" : "You"}:
                     </span>{" "}
@@ -500,7 +695,7 @@ function LiveInterview() {
                   </div>
                 ))}
                 {status === "listening" && interimText && (
-                  <div className="text-sm pl-6 italic text-muted-foreground">
+                  <div className="text-sm pl-4 italic text-muted-foreground border-l-2 border-emerald-400/20">
                     <span className="text-xs font-semibold text-emerald-400/70">You:</span> {interimText}…
                   </div>
                 )}
@@ -663,9 +858,24 @@ function Panel({ title, items, tone }: { title: string; items?: string[]; tone?:
 /* ================================================================== */
 function Interview() {
   return (
-    <DashboardShell title="Mock Interview" subtitle="Practice with AI · text demo or full voice-based live simulation">
-      <DemoInterview />
-      <LiveInterview />
+    <DashboardShell title="Mock Interview" subtitle="Practice with AI · manual typed round or full voice + camera live simulation">
+      <Tabs defaultValue="manual" className="w-full">
+        <TabsList className="glass rounded-xl p-1 h-auto">
+          <TabsTrigger value="manual" className="px-4 py-2 text-sm data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
+            <MessageSquareCode className="size-4 mr-1.5" /> Manual Interview
+          </TabsTrigger>
+          <TabsTrigger value="live" className="px-4 py-2 text-sm data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
+            <Radio className="size-4 mr-1.5" /> AI Live Interview
+            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-neon/20 text-neon">LIVE</span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="manual" className="mt-6">
+          <DemoInterview />
+        </TabsContent>
+        <TabsContent value="live" className="mt-6">
+          <LiveInterview />
+        </TabsContent>
+      </Tabs>
     </DashboardShell>
   );
 }
