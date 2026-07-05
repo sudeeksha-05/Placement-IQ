@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Video, Mic, MicOff, MessageSquareCode, Play, Loader2, Send, RotateCcw, Radio, PhoneOff, Sparkles, Volume2, Award, Download } from "lucide-react";
+import { Video, Mic, MicOff, MessageSquareCode, Play, Loader2, Send, RotateCcw, Radio, PhoneOff, Sparkles, Volume2, Award, Download, Camera, CameraOff, Activity, Eye, Sun } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { interviewTurn, liveInterviewNext, liveInterviewReport } from "@/lib/ai.functions";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/interview")({
