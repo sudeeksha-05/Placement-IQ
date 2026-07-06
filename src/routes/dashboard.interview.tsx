@@ -581,17 +581,25 @@ function LiveInterview() {
   };
 
   const start = async () => {
+    if (!isSecure) {
+      toast.error("This site must be served over HTTPS (or localhost) to use camera and microphone.");
+      return;
+    }
     if (!supportsSTT) {
       toast.error("Live voice interview requires Chrome or Edge browser.");
       return;
     }
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      toast.error("Microphone permission is required.");
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = micStream;
+    } catch (e: any) {
+      const name = e?.name || "";
+      if (name === "NotAllowedError") toast.error("Microphone permission denied. Enable it in your browser's site settings.");
+      else if (name === "NotFoundError") toast.error("No microphone detected on this device.");
+      else toast.error("Microphone permission is required.");
       return;
     }
-    await startCamera();
+    if (cameraEnabled) await startCamera(selectedCamId || undefined);
     setReport(null); setTranscript([]); setElapsed(0);
     startedAt.current = Date.now();
     turnsRemaining.current = Math.max(4, durationMin);
@@ -608,6 +616,9 @@ function LiveInterview() {
     setStatus("idle");
     setActive(false);
     stopCamera();
+    stopScreenShare();
+    audioStreamRef.current?.getTracks().forEach(t => t.stop());
+    audioStreamRef.current = null;
     if (transcriptRef.current.length > 0 && !report) {
       finalizeReport(transcriptRef.current);
     }
