@@ -211,7 +211,20 @@ function LiveInterview() {
   // Camera guidance
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
   const [camReady, setCamReady] = useState(false);
+  const [camInitializing, setCamInitializing] = useState(false);
+  const [camError, setCamError] = useState<string | null>(null);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCamId, setSelectedCamId] = useState<string>("");
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+
+  // Screen sharing
+  const screenRef = useRef<HTMLVideoElement | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const [screenActive, setScreenActive] = useState(false);
+  const [screenError, setScreenError] = useState<string | null>(null);
+
   const [guidance, setGuidance] = useState<{ lighting: "good"|"ok"|"low"; centering: "good"|"ok"|"off"; motion: "calm"|"active"|"high"; tips: string[] }>({
     lighting: "ok", centering: "ok", motion: "calm", tips: [],
   });
