@@ -662,6 +662,15 @@ Judge listening_analysis strictly from the transcript: did the candidate address
         energy: ["low","medium","high"].includes(p?.speech_analysis?.energy) ? p.speech_analysis.energy : "medium",
         tips: (Array.isArray(p?.speech_analysis?.tips) ? p.speech_analysis.tips : []).map(String).slice(0, 6),
       },
+      listening_analysis: {
+        comprehension_score: clamp(p?.listening_analysis?.comprehension_score),
+        answered_what_asked_percent: clamp(p?.listening_analysis?.answered_what_asked_percent),
+        clarifications_requested: Math.max(0, parseInt(p?.listening_analysis?.clarifications_requested, 10) || 0),
+        misinterpretations: (Array.isArray(p?.listening_analysis?.misinterpretations) ? p.listening_analysis.misinterpretations : []).map(String).slice(0, 6),
+        attentiveness: ["poor","fair","good","excellent"].includes(p?.listening_analysis?.attentiveness) ? p.listening_analysis.attentiveness : "good",
+        observations: (Array.isArray(p?.listening_analysis?.observations) ? p.listening_analysis.observations : []).map(String).slice(0, 6),
+        tips: (Array.isArray(p?.listening_analysis?.tips) ? p.listening_analysis.tips : []).map(String).slice(0, 6),
+      },
       readiness_percent: clamp(p.readiness_percent),
     };
   });
