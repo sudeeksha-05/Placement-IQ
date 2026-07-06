@@ -805,15 +805,25 @@ function LiveInterview() {
             <div className="lg:col-span-4 glass rounded-xl p-4 flex flex-col min-h-[280px]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-[10px] uppercase tracking-widest text-neon-2">Your camera</div>
-                <div className={`text-[10px] px-2 py-0.5 rounded-full ${camReady ? "bg-emerald-400/10 text-emerald-400" : "bg-muted-foreground/10 text-muted-foreground"}`}>
-                  {camReady ? "Live" : cameraEnabled ? "Starting…" : "Off"}
+                <div className={`text-[10px] px-2 py-0.5 rounded-full ${camReady ? "bg-emerald-400/10 text-emerald-400" : camError ? "bg-orange-400/10 text-orange-400" : "bg-muted-foreground/10 text-muted-foreground"}`}>
+                  {camReady ? "Live" : camInitializing ? "Starting…" : camError ? "Error" : cameraEnabled ? "Waiting" : "Off"}
                 </div>
               </div>
               <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video">
                 <video ref={videoRef} playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                 {!camReady && (
-                  <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
-                    {cameraEnabled ? "Waiting for camera…" : "Camera disabled"}
+                  <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground p-3 text-center">
+                    {camInitializing ? (
+                      <div className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Requesting camera…</div>
+                    ) : camError ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-1.5 text-orange-400"><AlertTriangle className="size-3.5" /> {camError}</div>
+                        <button onClick={() => startCamera(selectedCamId || undefined)}
+                          className="mx-auto text-[11px] glass rounded-full px-3 py-1 flex items-center gap-1 hover:bg-white/10">
+                          <RefreshCw className="size-3" /> Retry
+                        </button>
+                      </div>
+                    ) : cameraEnabled ? "Waiting for camera…" : "Camera disabled"}
                   </div>
                 )}
               </div>
