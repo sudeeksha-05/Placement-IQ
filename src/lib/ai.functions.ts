@@ -602,9 +602,18 @@ Return JSON:
     "energy": "low|medium|high",
     "tips": ["..."]
   },
+  "listening_analysis": {
+    "comprehension_score": 0-100,
+    "answered_what_asked_percent": 0-100,
+    "clarifications_requested": 0,
+    "misinterpretations": ["question the candidate misread and how"],
+    "attentiveness": "poor|fair|good|excellent",
+    "observations": ["how well the candidate parsed questions, followed up, addressed every part"],
+    "tips": ["actionable listening tips"]
+  },
   "readiness_percent": 0-100
 }
-Use REAL URLs (roadmap.sh, MDN, freecodecamp.org, leetcode.com, coursera.org, learn.microsoft.com, official docs).`;
+Judge listening_analysis strictly from the transcript: did the candidate address every part of each question, ask clarifying questions when needed, avoid drifting off-topic? Use REAL URLs (roadmap.sh, MDN, freecodecamp.org, leetcode.com, coursera.org, learn.microsoft.com, official docs).`;
 
     const json = await callAI({
       messages: [
