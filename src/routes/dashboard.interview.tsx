@@ -381,23 +381,66 @@ function LiveInterview() {
     try { recognitionRef.current?.stop(); } catch {}
   };
 
-  const startCamera = useCallback(async () => {
-    if (!cameraEnabled) return true;
+  const isSecure = useMemo(() => typeof window !== "undefined" && (window.isSecureContext || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"), []);
+
+  const listCameras = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" }, audio: false });
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const cams = devs.filter(d => d.kind === "videoinput");
+      setVideoDevices(cams);
+      if (cams.length && !selectedCamId) setSelectedCamId(cams[0].deviceId);
+    } catch { /* ignore */ }
+  }, [selectedCamId]);
+
+  const startCamera = useCallback(async (deviceId?: string) => {
+    if (!cameraEnabled) return true;
+    if (!isSecure) {
+      setCamError("Camera requires HTTPS or localhost. This page is served over an insecure origin.");
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamError("Your browser does not support camera access (MediaDevices API missing).");
+      return false;
+    }
+    setCamInitializing(true);
+    setCamError(null);
+    try {
+      // stop existing tracks before switching
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      const constraints: MediaStreamConstraints = {
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+        audio: false,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
-        setCamReady(true);
       }
+      setCamReady(true);
+      const track = stream.getVideoTracks()[0];
+      if (track?.getSettings) {
+        const s = track.getSettings();
+        if (s.deviceId) setSelectedCamId(s.deviceId);
+      }
+      await listCameras();
       return true;
-    } catch {
-      toast.error("Camera permission denied — continuing without video guidance.");
-      setCameraEnabled(false);
-      return true;
+    } catch (e: any) {
+      const name = e?.name || "";
+      let msg = e?.message || "Camera access failed.";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") msg = "Camera permission denied. Enable it in your browser's site settings and click Retry.";
+      else if (name === "NotFoundError" || name === "DevicesNotFoundError") msg = "No camera detected on this device.";
+      else if (name === "NotReadableError" || name === "TrackStartError") msg = "Camera is already in use by another application.";
+      else if (name === "OverconstrainedError") msg = "Selected camera doesn't support the requested resolution.";
+      setCamError(msg);
+      setCamReady(false);
+      return false;
+    } finally {
+      setCamInitializing(false);
     }
-  }, [cameraEnabled]);
+  }, [cameraEnabled, isSecure, listCameras]);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -405,6 +448,71 @@ function LiveInterview() {
     if (videoRef.current) videoRef.current.srcObject = null;
     setCamReady(false);
   }, []);
+
+  const toggleCameraLive = useCallback(async () => {
+    if (camReady) {
+      stopCamera();
+      setCameraEnabled(false);
+    } else {
+      setCameraEnabled(true);
+      await startCamera(selectedCamId || undefined);
+    }
+  }, [camReady, stopCamera, startCamera, selectedCamId]);
+
+  const switchCamera = useCallback(async (deviceId: string) => {
+    setSelectedCamId(deviceId);
+    setShowDeviceMenu(false);
+    await startCamera(deviceId);
+  }, [startCamera]);
+
+  const startScreenShare = useCallback(async () => {
+    if (!isSecure) { setScreenError("Screen sharing requires HTTPS or localhost."); return; }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setScreenError("Screen sharing isn't supported in this browser.");
+      return;
+    }
+    setScreenError(null);
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "monitor" } as any,
+        audio: false,
+      });
+      screenStreamRef.current = stream;
+      setScreenActive(true);
+      if (screenRef.current) {
+        screenRef.current.srcObject = stream;
+        await screenRef.current.play().catch(() => {});
+      }
+      const track = stream.getVideoTracks()[0];
+      const surface = (track?.getSettings?.() as any)?.displaySurface;
+      if (surface && surface !== "monitor") {
+        toast.info(`Sharing ${surface} — full screen sharing gives the best experience.`);
+      }
+      track?.addEventListener("ended", () => {
+        screenStreamRef.current = null;
+        setScreenActive(false);
+        if (screenRef.current) screenRef.current.srcObject = null;
+        toast.warning("Screen sharing ended. The interview will continue.");
+      });
+    } catch (e: any) {
+      if (e?.name !== "NotAllowedError") setScreenError(e?.message || "Screen sharing failed.");
+    }
+  }, [isSecure]);
+
+  const stopScreenShare = useCallback(() => {
+    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
+    if (screenRef.current) screenRef.current.srcObject = null;
+    setScreenActive(false);
+  }, []);
+
+  // Detect tab-away while interviewing
+  useEffect(() => {
+    if (!active) return;
+    const onVis = () => { if (document.visibilityState === "hidden") toast.warning("Please stay on this tab during the interview."); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [active]);
 
   const runConversation = async (openingMs: LiveMsg[]) => {
     let history = [...openingMs];
