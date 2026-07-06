@@ -236,7 +236,7 @@ function LiveInterview() {
   const mutedRef = useRef(false);
   const transcriptRef = useRef<LiveMsg[]>([]);
   useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
-  useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => { mutedRef.current = muted; audioStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !muted); }, [muted]);
 
   // timer
   useEffect(() => {
