@@ -690,14 +690,19 @@ function LiveInterview() {
               <input type="range" min={4} max={20} value={durationMin} onChange={e => setDurationMin(parseInt(e.target.value,10))} className="w-full" />
             </Field>
           </div>
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
             <button onClick={() => setCameraEnabled(v => !v)}
               className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${cameraEnabled ? "text-emerald-400" : "text-muted-foreground"}`}>
               {cameraEnabled ? <Camera className="size-3" /> : <CameraOff className="size-3" />}
               {cameraEnabled ? "Camera on" : "Camera off"}
             </button>
-            <span className="text-xs text-muted-foreground">Camera enables live coaching on posture, framing & lighting.</span>
+            <span className="text-xs text-muted-foreground">Camera & screen share are requested only after you click Start.</span>
           </div>
+          {!isSecure && (
+            <div className="mt-3 rounded-lg bg-orange-400/10 text-orange-400 text-xs px-3 py-2 flex items-center gap-2">
+              <Lock className="size-3.5" /> This page must be served over HTTPS (or localhost) for camera, microphone, and screen sharing to work.
+            </div>
+          )}
           <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
             <p className="text-xs text-muted-foreground">
               Uses your latest resume + profile for personalized questions. Requires microphone. Best in Chrome / Edge.
