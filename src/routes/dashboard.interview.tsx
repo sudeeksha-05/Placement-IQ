@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Video, Mic, MicOff, MessageSquareCode, Play, Loader2, Send, RotateCcw, Radio, PhoneOff, Sparkles, Volume2, Award, Download, Camera, CameraOff, Activity, Eye, Sun } from "lucide-react";
+import { Video, Mic, MicOff, MessageSquareCode, Play, Loader2, Send, RotateCcw, Radio, PhoneOff, Sparkles, Volume2, Award, Download, Camera, CameraOff, Activity, Eye, Sun, MonitorUp, MonitorOff, RefreshCw, AlertTriangle, Lock, Settings } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -211,7 +211,20 @@ function LiveInterview() {
   // Camera guidance
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
   const [camReady, setCamReady] = useState(false);
+  const [camInitializing, setCamInitializing] = useState(false);
+  const [camError, setCamError] = useState<string | null>(null);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCamId, setSelectedCamId] = useState<string>("");
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
+
+  // Screen sharing
+  const screenRef = useRef<HTMLVideoElement | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const [screenActive, setScreenActive] = useState(false);
+  const [screenError, setScreenError] = useState<string | null>(null);
+
   const [guidance, setGuidance] = useState<{ lighting: "good"|"ok"|"low"; centering: "good"|"ok"|"off"; motion: "calm"|"active"|"high"; tips: string[] }>({
     lighting: "ok", centering: "ok", motion: "calm", tips: [],
   });
@@ -223,7 +236,7 @@ function LiveInterview() {
   const mutedRef = useRef(false);
   const transcriptRef = useRef<LiveMsg[]>([]);
   useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
-  useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => { mutedRef.current = muted; audioStreamRef.current?.getAudioTracks().forEach(t => t.enabled = !muted); }, [muted]);
 
   // timer
   useEffect(() => {
@@ -368,23 +381,66 @@ function LiveInterview() {
     try { recognitionRef.current?.stop(); } catch {}
   };
 
-  const startCamera = useCallback(async () => {
-    if (!cameraEnabled) return true;
+  const isSecure = useMemo(() => typeof window !== "undefined" && (window.isSecureContext || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"), []);
+
+  const listCameras = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" }, audio: false });
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const cams = devs.filter(d => d.kind === "videoinput");
+      setVideoDevices(cams);
+      if (cams.length && !selectedCamId) setSelectedCamId(cams[0].deviceId);
+    } catch { /* ignore */ }
+  }, [selectedCamId]);
+
+  const startCamera = useCallback(async (deviceId?: string) => {
+    if (!cameraEnabled) return true;
+    if (!isSecure) {
+      setCamError("Camera requires HTTPS or localhost. This page is served over an insecure origin.");
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamError("Your browser does not support camera access (MediaDevices API missing).");
+      return false;
+    }
+    setCamInitializing(true);
+    setCamError(null);
+    try {
+      // stop existing tracks before switching
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      const constraints: MediaStreamConstraints = {
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+        audio: false,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
-        setCamReady(true);
       }
+      setCamReady(true);
+      const track = stream.getVideoTracks()[0];
+      if (track?.getSettings) {
+        const s = track.getSettings();
+        if (s.deviceId) setSelectedCamId(s.deviceId);
+      }
+      await listCameras();
       return true;
-    } catch {
-      toast.error("Camera permission denied — continuing without video guidance.");
-      setCameraEnabled(false);
-      return true;
+    } catch (e: any) {
+      const name = e?.name || "";
+      let msg = e?.message || "Camera access failed.";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") msg = "Camera permission denied. Enable it in your browser's site settings and click Retry.";
+      else if (name === "NotFoundError" || name === "DevicesNotFoundError") msg = "No camera detected on this device.";
+      else if (name === "NotReadableError" || name === "TrackStartError") msg = "Camera is already in use by another application.";
+      else if (name === "OverconstrainedError") msg = "Selected camera doesn't support the requested resolution.";
+      setCamError(msg);
+      setCamReady(false);
+      return false;
+    } finally {
+      setCamInitializing(false);
     }
-  }, [cameraEnabled]);
+  }, [cameraEnabled, isSecure, listCameras]);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -392,6 +448,71 @@ function LiveInterview() {
     if (videoRef.current) videoRef.current.srcObject = null;
     setCamReady(false);
   }, []);
+
+  const toggleCameraLive = useCallback(async () => {
+    if (camReady) {
+      stopCamera();
+      setCameraEnabled(false);
+    } else {
+      setCameraEnabled(true);
+      await startCamera(selectedCamId || undefined);
+    }
+  }, [camReady, stopCamera, startCamera, selectedCamId]);
+
+  const switchCamera = useCallback(async (deviceId: string) => {
+    setSelectedCamId(deviceId);
+    setShowDeviceMenu(false);
+    await startCamera(deviceId);
+  }, [startCamera]);
+
+  const startScreenShare = useCallback(async () => {
+    if (!isSecure) { setScreenError("Screen sharing requires HTTPS or localhost."); return; }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setScreenError("Screen sharing isn't supported in this browser.");
+      return;
+    }
+    setScreenError(null);
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "monitor" } as any,
+        audio: false,
+      });
+      screenStreamRef.current = stream;
+      setScreenActive(true);
+      if (screenRef.current) {
+        screenRef.current.srcObject = stream;
+        await screenRef.current.play().catch(() => {});
+      }
+      const track = stream.getVideoTracks()[0];
+      const surface = (track?.getSettings?.() as any)?.displaySurface;
+      if (surface && surface !== "monitor") {
+        toast.info(`Sharing ${surface} — full screen sharing gives the best experience.`);
+      }
+      track?.addEventListener("ended", () => {
+        screenStreamRef.current = null;
+        setScreenActive(false);
+        if (screenRef.current) screenRef.current.srcObject = null;
+        toast.warning("Screen sharing ended. The interview will continue.");
+      });
+    } catch (e: any) {
+      if (e?.name !== "NotAllowedError") setScreenError(e?.message || "Screen sharing failed.");
+    }
+  }, [isSecure]);
+
+  const stopScreenShare = useCallback(() => {
+    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
+    if (screenRef.current) screenRef.current.srcObject = null;
+    setScreenActive(false);
+  }, []);
+
+  // Detect tab-away while interviewing
+  useEffect(() => {
+    if (!active) return;
+    const onVis = () => { if (document.visibilityState === "hidden") toast.warning("Please stay on this tab during the interview."); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [active]);
 
   const runConversation = async (openingMs: LiveMsg[]) => {
     let history = [...openingMs];
@@ -460,17 +581,25 @@ function LiveInterview() {
   };
 
   const start = async () => {
+    if (!isSecure) {
+      toast.error("This site must be served over HTTPS (or localhost) to use camera and microphone.");
+      return;
+    }
     if (!supportsSTT) {
       toast.error("Live voice interview requires Chrome or Edge browser.");
       return;
     }
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      toast.error("Microphone permission is required.");
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = micStream;
+    } catch (e: any) {
+      const name = e?.name || "";
+      if (name === "NotAllowedError") toast.error("Microphone permission denied. Enable it in your browser's site settings.");
+      else if (name === "NotFoundError") toast.error("No microphone detected on this device.");
+      else toast.error("Microphone permission is required.");
       return;
     }
-    await startCamera();
+    if (cameraEnabled) await startCamera(selectedCamId || undefined);
     setReport(null); setTranscript([]); setElapsed(0);
     startedAt.current = Date.now();
     turnsRemaining.current = Math.max(4, durationMin);
@@ -487,6 +616,9 @@ function LiveInterview() {
     setStatus("idle");
     setActive(false);
     stopCamera();
+    stopScreenShare();
+    audioStreamRef.current?.getTracks().forEach(t => t.stop());
+    audioStreamRef.current = null;
     if (transcriptRef.current.length > 0 && !report) {
       finalizeReport(transcriptRef.current);
     }
@@ -558,14 +690,19 @@ function LiveInterview() {
               <input type="range" min={4} max={20} value={durationMin} onChange={e => setDurationMin(parseInt(e.target.value,10))} className="w-full" />
             </Field>
           </div>
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
             <button onClick={() => setCameraEnabled(v => !v)}
               className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${cameraEnabled ? "text-emerald-400" : "text-muted-foreground"}`}>
               {cameraEnabled ? <Camera className="size-3" /> : <CameraOff className="size-3" />}
               {cameraEnabled ? "Camera on" : "Camera off"}
             </button>
-            <span className="text-xs text-muted-foreground">Camera enables live coaching on posture, framing & lighting.</span>
+            <span className="text-xs text-muted-foreground">Camera & screen share are requested only after you click Start.</span>
           </div>
+          {!isSecure && (
+            <div className="mt-3 rounded-lg bg-orange-400/10 text-orange-400 text-xs px-3 py-2 flex items-center gap-2">
+              <Lock className="size-3.5" /> This page must be served over HTTPS (or localhost) for camera, microphone, and screen sharing to work.
+            </div>
+          )}
           <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
             <p className="text-xs text-muted-foreground">
               Uses your latest resume + profile for personalized questions. Requires microphone. Best in Chrome / Edge.
@@ -580,14 +717,44 @@ function LiveInterview() {
 
       {active && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-strong neon-border rounded-2xl p-6">
-          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`inline-block size-2.5 rounded-full ${statusColor} animate-pulse`} />
               <span className="text-sm font-semibold">{statusLabel}</span>
               <span className="text-xs text-muted-foreground">· {type} · {difficulty}{company !== "Any" && ` · ${company}`}</span>
+              <div className="flex items-center gap-1 ml-2">
+                {camReady && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Camera</span>}
+                {!muted && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Mic</span>}
+                {screenActive && <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon/10 text-neon">Screen sharing</span>}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="text-xs glass rounded-full px-3 py-1.5 font-mono">{mmss(elapsed)}</div>
+              <button onClick={toggleCameraLive} title={camReady ? "Turn camera off" : "Turn camera on"}
+                className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${camReady ? "text-emerald-400" : "text-muted-foreground"}`}>
+                {camReady ? <Camera className="size-3" /> : <CameraOff className="size-3" />} {camReady ? "Camera" : "Camera off"}
+              </button>
+              {videoDevices.length > 1 && camReady && (
+                <div className="relative">
+                  <button onClick={() => setShowDeviceMenu(v => !v)} className="text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1">
+                    <Settings className="size-3" /> Switch
+                  </button>
+                  {showDeviceMenu && (
+                    <div className="absolute right-0 mt-1 w-56 glass-strong neon-border rounded-lg p-1 z-20">
+                      {videoDevices.map(d => (
+                        <button key={d.deviceId} onClick={() => switchCamera(d.deviceId)}
+                          className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-white/10 ${d.deviceId === selectedCamId ? "text-neon-2" : ""}`}>
+                          {d.label || `Camera ${d.deviceId.slice(0, 6)}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <button onClick={screenActive ? stopScreenShare : startScreenShare}
+                className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${screenActive ? "text-neon" : ""}`}>
+                {screenActive ? <MonitorOff className="size-3" /> : <MonitorUp className="size-3" />} {screenActive ? "Stop share" : "Share screen"}
+              </button>
               <button onClick={() => setMuted(m => !m)}
                 className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${muted ? "text-orange-400" : ""}`}>
                 {muted ? <MicOff className="size-3" /> : <Mic className="size-3" />} {muted ? "Muted" : "Mute"}
@@ -638,15 +805,25 @@ function LiveInterview() {
             <div className="lg:col-span-4 glass rounded-xl p-4 flex flex-col min-h-[280px]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-[10px] uppercase tracking-widest text-neon-2">Your camera</div>
-                <div className={`text-[10px] px-2 py-0.5 rounded-full ${camReady ? "bg-emerald-400/10 text-emerald-400" : "bg-muted-foreground/10 text-muted-foreground"}`}>
-                  {camReady ? "Live" : cameraEnabled ? "Starting…" : "Off"}
+                <div className={`text-[10px] px-2 py-0.5 rounded-full ${camReady ? "bg-emerald-400/10 text-emerald-400" : camError ? "bg-orange-400/10 text-orange-400" : "bg-muted-foreground/10 text-muted-foreground"}`}>
+                  {camReady ? "Live" : camInitializing ? "Starting…" : camError ? "Error" : cameraEnabled ? "Waiting" : "Off"}
                 </div>
               </div>
               <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video">
                 <video ref={videoRef} playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                 {!camReady && (
-                  <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
-                    {cameraEnabled ? "Waiting for camera…" : "Camera disabled"}
+                  <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground p-3 text-center">
+                    {camInitializing ? (
+                      <div className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Requesting camera…</div>
+                    ) : camError ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-1.5 text-orange-400"><AlertTriangle className="size-3.5" /> {camError}</div>
+                        <button onClick={() => startCamera(selectedCamId || undefined)}
+                          className="mx-auto text-[11px] glass rounded-full px-3 py-1 flex items-center gap-1 hover:bg-white/10">
+                          <RefreshCw className="size-3" /> Retry
+                        </button>
+                      </div>
+                    ) : cameraEnabled ? "Waiting for camera…" : "Camera disabled"}
                   </div>
                 )}
               </div>
@@ -705,6 +882,35 @@ function LiveInterview() {
               </div>
             </div>
           </div>
+
+          {(screenActive || screenError) && (
+            <div className="mt-4 glass rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] uppercase tracking-widest text-neon flex items-center gap-1.5">
+                  <MonitorUp className="size-3" /> Shared screen preview
+                </div>
+                {screenActive ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon/10 text-neon flex items-center gap-1">
+                    <span className="size-1.5 rounded-full bg-neon animate-pulse" /> Screen sharing active
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-400/10 text-orange-400">Not sharing</span>
+                )}
+              </div>
+              {screenActive ? (
+                <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video max-h-[360px]">
+                  <video ref={screenRef} playsInline muted autoPlay className="w-full h-full object-contain" />
+                </div>
+              ) : screenError ? (
+                <div className="text-xs text-orange-400 flex items-center gap-2">
+                  <AlertTriangle className="size-3.5" /> {screenError}
+                  <button onClick={startScreenShare} className="ml-auto text-[11px] glass rounded-full px-3 py-1 flex items-center gap-1 hover:bg-white/10">
+                    <RefreshCw className="size-3" /> Retry
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </motion.div>
       )}
 
