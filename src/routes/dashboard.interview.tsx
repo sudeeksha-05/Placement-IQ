@@ -882,6 +882,35 @@ function LiveInterview() {
               </div>
             </div>
           </div>
+
+          {(screenActive || screenError) && (
+            <div className="mt-4 glass rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] uppercase tracking-widest text-neon flex items-center gap-1.5">
+                  <MonitorUp className="size-3" /> Shared screen preview
+                </div>
+                {screenActive ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon/10 text-neon flex items-center gap-1">
+                    <span className="size-1.5 rounded-full bg-neon animate-pulse" /> Screen sharing active
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-400/10 text-orange-400">Not sharing</span>
+                )}
+              </div>
+              {screenActive ? (
+                <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video max-h-[360px]">
+                  <video ref={screenRef} playsInline muted autoPlay className="w-full h-full object-contain" />
+                </div>
+              ) : screenError ? (
+                <div className="text-xs text-orange-400 flex items-center gap-2">
+                  <AlertTriangle className="size-3.5" /> {screenError}
+                  <button onClick={startScreenShare} className="ml-auto text-[11px] glass rounded-full px-3 py-1 flex items-center gap-1 hover:bg-white/10">
+                    <RefreshCw className="size-3" /> Retry
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </motion.div>
       )}
 
