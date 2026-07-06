@@ -717,14 +717,44 @@ function LiveInterview() {
 
       {active && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-strong neon-border rounded-2xl p-6">
-          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`inline-block size-2.5 rounded-full ${statusColor} animate-pulse`} />
               <span className="text-sm font-semibold">{statusLabel}</span>
               <span className="text-xs text-muted-foreground">· {type} · {difficulty}{company !== "Any" && ` · ${company}`}</span>
+              <div className="flex items-center gap-1 ml-2">
+                {camReady && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Camera</span>}
+                {!muted && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Mic</span>}
+                {screenActive && <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon/10 text-neon">Screen sharing</span>}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="text-xs glass rounded-full px-3 py-1.5 font-mono">{mmss(elapsed)}</div>
+              <button onClick={toggleCameraLive} title={camReady ? "Turn camera off" : "Turn camera on"}
+                className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${camReady ? "text-emerald-400" : "text-muted-foreground"}`}>
+                {camReady ? <Camera className="size-3" /> : <CameraOff className="size-3" />} {camReady ? "Camera" : "Camera off"}
+              </button>
+              {videoDevices.length > 1 && camReady && (
+                <div className="relative">
+                  <button onClick={() => setShowDeviceMenu(v => !v)} className="text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1">
+                    <Settings className="size-3" /> Switch
+                  </button>
+                  {showDeviceMenu && (
+                    <div className="absolute right-0 mt-1 w-56 glass-strong neon-border rounded-lg p-1 z-20">
+                      {videoDevices.map(d => (
+                        <button key={d.deviceId} onClick={() => switchCamera(d.deviceId)}
+                          className={`w-full text-left text-xs px-2 py-1.5 rounded hover:bg-white/10 ${d.deviceId === selectedCamId ? "text-neon-2" : ""}`}>
+                          {d.label || `Camera ${d.deviceId.slice(0, 6)}`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <button onClick={screenActive ? stopScreenShare : startScreenShare}
+                className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${screenActive ? "text-neon" : ""}`}>
+                {screenActive ? <MonitorOff className="size-3" /> : <MonitorUp className="size-3" />} {screenActive ? "Stop share" : "Share screen"}
+              </button>
               <button onClick={() => setMuted(m => !m)}
                 className={`text-xs glass rounded-full px-3 py-1.5 flex items-center gap-1 ${muted ? "text-orange-400" : ""}`}>
                 {muted ? <MicOff className="size-3" /> : <Mic className="size-3" />} {muted ? "Muted" : "Mute"}
