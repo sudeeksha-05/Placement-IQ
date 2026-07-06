@@ -836,6 +836,40 @@ function ReportView({ report, onDownload, onReset }: { report: any; onDownload: 
             </ul>
           )}
         </div>
+        {report.listening_analysis && (
+          <div className="glass rounded-xl p-4 md:col-span-2">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+              <h4 className="text-xs uppercase tracking-widest text-neon-2">Listening analysis</h4>
+              <span className="text-xs text-muted-foreground">Attentiveness: <span className="text-foreground/90 font-semibold capitalize">{report.listening_analysis.attentiveness}</span></span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <ScorePill label="Comprehension" value={report.listening_analysis.comprehension_score} />
+              <ScorePill label="Answered fully" value={report.listening_analysis.answered_what_asked_percent} />
+              <div className="glass rounded-lg p-2 text-center">
+                <div className="text-lg font-bold text-neon-2">{report.listening_analysis.clarifications_requested}</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Clarifications</div>
+              </div>
+            </div>
+            {report.listening_analysis.observations?.length > 0 && (
+              <ul className="space-y-1 text-sm mb-2">
+                {report.listening_analysis.observations.map((o: string, i: number) => <li key={i}><span className="text-neon-2">• </span>{o}</li>)}
+              </ul>
+            )}
+            {report.listening_analysis.misinterpretations?.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs uppercase tracking-widest text-orange-400 mb-1">Misinterpretations</p>
+                <ul className="space-y-1 text-sm">
+                  {report.listening_analysis.misinterpretations.map((m: string, i: number) => <li key={i} className="text-foreground/80">→ {m}</li>)}
+                </ul>
+              </div>
+            )}
+            {report.listening_analysis.tips?.length > 0 && (
+              <ul className="mt-2 space-y-1 text-xs list-disc pl-4 text-muted-foreground">
+                {report.listening_analysis.tips.map((t: string, i: number) => <li key={i}>{t}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
