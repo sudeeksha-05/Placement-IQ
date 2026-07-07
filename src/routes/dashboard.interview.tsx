@@ -245,6 +245,21 @@ function LiveInterview() {
     return () => clearInterval(t);
   }, [active]);
 
+  // Keep the <video> element in sync with the active MediaStream.
+  // The element mounts conditionally, so re-attach whenever it becomes ready.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (camReady && streamRef.current && v.srcObject !== streamRef.current) {
+      v.srcObject = streamRef.current;
+    }
+    if (v.srcObject) {
+      const tryPlay = () => v.play().catch(() => {});
+      tryPlay();
+      v.onloadedmetadata = tryPlay;
+    }
+  }, [camReady, active]);
+
   // camera guidance loop (lightweight: brightness + face box heuristic + motion)
   useEffect(() => {
     if (!active || !cameraEnabled || !camReady) return;
