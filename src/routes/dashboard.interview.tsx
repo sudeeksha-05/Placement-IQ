@@ -810,7 +810,7 @@ function LiveInterview() {
                 </div>
               </div>
               <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video">
-                <video ref={videoRef} playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
                 {!camReady && (
                   <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground p-3 text-center">
                     {camInitializing ? (
